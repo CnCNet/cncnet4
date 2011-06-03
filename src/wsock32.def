@@ -1,0 +1,38 @@
+LIBRARY     wsock32.dll
+
+EXPORTS
+    accept                  = "system32\\wsock32".accept                   @1
+    bind                    = fake_bind                                    @2
+    closesocket             = "system32\\wsock32".closesocket              @3
+    connect                 = "system32\\wsock32".connect                  @4
+    getpeername             = "system32\\wsock32".getpeername              @5
+    getsockname             = "system32\\wsock32".getsockname              @6
+    getsockopt              = fake_getsockopt                              @7
+    htonl                   = "system32\\wsock32".htonl                    @8
+    htons                   = "system32\\wsock32".htons                    @9
+    inet_addr               = "system32\\wsock32".inet_addr                @10
+    inet_ntoa               = "system32\\wsock32".inet_ntoa                @11
+    ioctlsocket             = fake_ioctlsocket                             @12
+    listen                  = "system32\\wsock32".listen                   @13
+    ntohl                   = "system32\\wsock32".ntohl                    @14
+    ntohs                   = "system32\\wsock32".ntohs                    @15
+    recv                    = "system32\\wsock32".recv                     @16
+    recvfrom                = fake_recvfrom                                @17
+    select                  = "system32\\wsock32".select                   @18
+    send                    = "system32\\wsock32".send                     @19
+    sendto                  = fake_sendto                                  @20
+    setsockopt              = fake_setsockopt                              @21
+    shutdown                = "system32\\wsock32".shutdown                 @22
+    socket                  = fake_socket                                  @23
+    gethostbyname           = "system32\\wsock32".gethostbyname            @52
+    gethostname             = "system32\\wsock32".gethostname              @57
+    WSAAsyncSelect          = "system32\\wsock32".WSAAsyncSelect           @101
+    WSAAsyncGetHostByAddr   = "system32\\wsock32".WSAAsyncGetHostByAddr    @102
+    WSAAsyncGetHostByName   = "system32\\wsock32".WSAAsyncGetHostByName    @103
+    WSACancelAsyncRequest   = "system32\\wsock32".WSACancelAsyncRequest    @108
+    WSAGetLastError         = "system32\\wsock32".WSAGetLastError          @111
+    WSASetLastError         = "system32\\wsock32".WSASetLastError          @112
+    WSAStartup              = "system32\\wsock32".WSAStartup               @115
+    WSACleanup              = "system32\\wsock32".WSACleanup               @116
+    __WSAFDIsSet            = "system32\\wsock32".__WSAFDIsSet             @151
+    EnumProtocolsA          = "system32\\wsock32".EnumProtocolsA           @1111

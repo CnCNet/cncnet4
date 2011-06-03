@@ -1,0 +1,24 @@
+1 VERSIONINFO
+{
+    BLOCK "StringFileInfo"
+    {
+        BLOCK "040904B0"
+        {
+            VALUE "CompanyName", "Toni Spets"
+            VALUE "FileDescription", "__GAME__"
+            VALUE "FileVersion", "git __REV__"
+            VALUE "InternalName", "__FILE__"
+            VALUE "LegalCopyright", "Copyright (c) 2008, 2010, 2011 Toni Spets"
+            VALUE "LegalTrademarks", ""
+            VALUE "OriginalFileName", "__FILE__.dll"
+            VALUE "ProductName", ""
+            VALUE "ProductVersion", "git __REV__"
+            VALUE "Comments", ""
+        }
+    }
+
+    BLOCK "VarFileInfo"
+    {
+        VALUE "Translation",  0x0409, 0x04B0
+    }
+}
