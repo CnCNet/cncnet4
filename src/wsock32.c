@@ -54,9 +54,6 @@ int WINAPI fake_bind(SOCKET s, const struct sockaddr *name, int namelen)
 
 int WINAPI fake_recvfrom(SOCKET s, char *buf, int len, int flags, struct sockaddr *from, int *fromlen)
 {
-    memset(buf, 0, len);
-    memset(from, 0, *fromlen);
-
     int ret = net_recv(s, buf, len, (struct sockaddr_in *)from);
 
     if(ret > 0)
@@ -131,8 +128,29 @@ int WINAPI fake_setsockopt(SOCKET s, int level, int optname, const char *optval,
     return setsockopt(s, level, optname, optval, optlen);
 }
 
-int WINAPI fake_ioctlsocket(SOCKET s, long cmd, u_long *argp)
+int WINAPI fake_getsockname(SOCKET s, struct sockaddr *name, int *namelen)
 {
-    printf("ioctlsocket(s=%d, cmd=%08X, argp=%p)\n", s, (unsigned int)cmd, argp);
-    return ioctlsocket(s, cmd, argp);
+    struct sockaddr_ipx *ipx = (struct sockaddr_ipx *)name;
+    printf("getsockname(s=%d, name=%p, namelen=%p (%d)\n", s, name, namelen, *namelen);
+
+    char hostname[256];
+    struct hostent *he;
+
+    gethostname(hostname, 256);
+    he = gethostbyname(hostname);
+
+    printf("getsockname: local hostname: %s\n", hostname);
+
+    memset(name, 0x00, *namelen);
+    unsigned short port = htons(8054);
+    ipx->sa_family = AF_IPX;
+    memcpy(&ipx->sa_socket, &port, 2);
+
+    if (he)
+    {
+        printf("getsockname: local ip: %s\n", inet_ntoa(*(struct in_addr *)(he->h_addr_list[0])));
+        memcpy(ipx->sa_nodenum, (struct in_addr *)(he->h_addr_list[0]), 4);
+    }
+
+    return 0;
 }

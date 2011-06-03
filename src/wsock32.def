@@ -6,13 +6,13 @@ EXPORTS
     closesocket             = "system32\\wsock32".closesocket              @3
     connect                 = "system32\\wsock32".connect                  @4
     getpeername             = "system32\\wsock32".getpeername              @5
-    getsockname             = "system32\\wsock32".getsockname              @6
+    getsockname             = fake_getsockname                             @6
     getsockopt              = fake_getsockopt                              @7
     htonl                   = "system32\\wsock32".htonl                    @8
     htons                   = "system32\\wsock32".htons                    @9
     inet_addr               = "system32\\wsock32".inet_addr                @10
     inet_ntoa               = "system32\\wsock32".inet_ntoa                @11
-    ioctlsocket             = fake_ioctlsocket                             @12
+    ioctlsocket             = "system32\\wsock32".ioctlsocket              @12
     listen                  = "system32\\wsock32".listen                   @13
     ntohl                   = "system32\\wsock32".ntohl                    @14
     ntohs                   = "system32\\wsock32".ntohs                    @15
