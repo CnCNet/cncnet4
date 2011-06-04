@@ -21,7 +21,7 @@
 
 #define INI_NAME "carmanet.ini"
 
-char        config_server[64] = "dolly.rulex.net";
+char        config_server[64] = "hifi.iki.fi";
 uint16_t    config_server_port = NET_PORT;
 uint16_t    config_port = NET_PORT;
 
