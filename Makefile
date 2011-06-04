@@ -14,5 +14,8 @@ internet: src/wsock32_internet.c src/sockets.c
 	sed 's/__REV__/$(REV)/g' src/dll.rc.in | sed 's/__FILE__/wsock32-internet/g' | sed 's/__GAME__/Carmageddon & Carmageddon 2 UDP Internet patch/g' | $(WINDRES) -O coff -o src/dll.o
 	$(CC) $(CFLAGS) -DBUILD_DLL -Wl,--enable-stdcall-fixup -shared -s -o wsock32-internet.dll src/wsock32_internet.c src/sockets.c src/config.c src/wsock32.def src/dll.o $(LIBS)
 
+server: src/server.c src/sockets.c src/sockets.h
+	gcc $(CFLAGS) -o server src/server.c src/sockets.c
+
 clean:
 	rm -f wsock32.dll src/dll.o
