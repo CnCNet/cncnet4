@@ -16,9 +16,10 @@
  */
 
 #include "sockets.h"
-#include <winsock2.h>
 #include <stdio.h>
+#include <string.h>
 
+#ifdef WIN32
 void ipx2in(struct sockaddr_ipx *from, struct sockaddr_in *to)
 {
     to->sin_family = AF_INET;
@@ -43,6 +44,7 @@ int is_ipx_broadcast(struct sockaddr_ipx *addr)
     else
         return FALSE;
 }
+#endif
 
 int net_broadcast(uint16_t sock)
 {
@@ -84,6 +86,11 @@ void net_address_ex(struct sockaddr_in *addr, uint32_t ip, uint16_t port)
 
 int net_recv(uint16_t sock, char *buf, uint32_t len, struct sockaddr_in *who)
 {
-    int tmp = sizeof(struct sockaddr);
+#ifdef WIN32
+    int
+#else
+    socklen_t
+#endif
+        tmp = sizeof(struct sockaddr);
     return recvfrom(sock, (char *)buf, len, 0, (struct sockaddr *)who, &tmp);
 }
