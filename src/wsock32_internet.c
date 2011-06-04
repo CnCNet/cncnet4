@@ -75,15 +75,16 @@ int WINAPI fake_recvfrom(SOCKET s, char *buf, int len, int flags, struct sockadd
 
     if(ret > 0)
     {
-        in2ipx(&from_in, (struct sockaddr_ipx *)from);
-
         if (memcmp(&from_in, &my_server, sizeof(struct sockaddr_in)) == 0)
         {
-            printf("broadcast!\n");
             memcpy(&from_in.sin_addr.s_addr, my_buf, 4);
             memcpy(&from_in.sin_port, my_buf + 4, 2);
-            memcpy(buf + 6, my_buf, ret - 6);
+            memcpy(buf, my_buf + 6, ret - 6);
+            in2ipx(&from_in, (struct sockaddr_ipx *)from);
             return ret - 6;
+        } else {
+            memcpy(buf, my_buf, ret);
+            in2ipx(&from_in, (struct sockaddr_ipx *)from);
         }
     }
 
