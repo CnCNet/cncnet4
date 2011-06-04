@@ -22,6 +22,32 @@
 
 struct sockaddr_in my_addr;
 struct sockaddr_in my_bcast;
+unsigned short my_port = 8055;
+
+void ipx2in(struct sockaddr_ipx *from, struct sockaddr_in *to)
+{
+    to->sin_family = AF_INET;
+    memcpy(&to->sin_addr.s_addr, from->sa_nodenum, 4);
+    memcpy(&to->sin_port, from->sa_nodenum + 4, 2);
+}
+
+void in2ipx(struct sockaddr_in *from, struct sockaddr_ipx *to)
+{
+    to->sa_family = AF_IPX;
+    *(DWORD *)&to->sa_netnum = 1;
+    memcpy(to->sa_nodenum, &from->sin_addr.s_addr, 4);
+    memcpy(to->sa_nodenum + 4, &from->sin_port, 2);
+    to->sa_socket = from->sin_port;
+}
+
+int is_ipx_broadcast(struct sockaddr_ipx *addr)
+{
+    unsigned char ff[] = { 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF };
+    if (memcmp(addr->sa_netnum, ff, 4) == 0 || memcmp(addr->sa_nodenum, ff, 6) == 0)
+        return TRUE;
+    else
+        return FALSE;
+}
 
 SOCKET WINAPI fake_socket(int af, int type, int protocol)
 {
@@ -30,8 +56,8 @@ SOCKET WINAPI fake_socket(int af, int type, int protocol)
     if (af == AF_IPX)
     {
         SOCKET s = net_socket();
-        net_address_ex(&my_addr, INADDR_ANY, 8054);
-        net_address_ex(&my_bcast, INADDR_BROADCAST, 8054);
+        net_address_ex(&my_addr, INADDR_ANY, my_port);
+        net_address_ex(&my_bcast, INADDR_BROADCAST, my_port);
         net_broadcast(s);
         bind(s, (const struct sockaddr *)&my_addr, sizeof(struct sockaddr_in));
         return s;
@@ -54,33 +80,36 @@ int WINAPI fake_bind(SOCKET s, const struct sockaddr *name, int namelen)
 
 int WINAPI fake_recvfrom(SOCKET s, char *buf, int len, int flags, struct sockaddr *from, int *fromlen)
 {
-    int ret = net_recv(s, buf, len, (struct sockaddr_in *)from);
+    struct sockaddr_in from_in;
+
+    int ret = net_recv(s, buf, len, &from_in);
 
     if(ret > 0)
     {
-        ((struct sockaddr_ipx *)from)->sa_family = AF_IPX;
+        in2ipx(&from_in, (struct sockaddr_ipx *)from);
     }
 
+#ifdef _DEBUG
     printf("recvfrom(s=%d, buf=%p, len=%d, flags=%08X, from=%p, fromlen=%p (%d) -> %d (err: %d)\n", s, buf, len, flags, from, fromlen, *fromlen, ret, WSAGetLastError());
+#endif
 
     return ret;
 }
 
 int WINAPI fake_sendto(SOCKET s, const char *buf, int len, int flags, const struct sockaddr *to, int tolen)
 {
+#ifdef _DEBUG
     printf("sendto(s=%d, buf=%p, len=%d, flags=%08X, to=%p, tolen=%d\n", s, buf, len, flags, to, tolen);
+#endif
 
     if (to->sa_family == AF_IPX)
     {
-        struct sockaddr_ipx *to_ipx = (struct sockaddr_ipx *)to;
         struct sockaddr_in to_in;
 
-        to_in.sin_family = AF_INET;
-        to_in.sin_addr.s_addr = ((struct sockaddr_in *)to)->sin_addr.s_addr;
-        to_in.sin_port = ((struct sockaddr_in *)to)->sin_port;
+        ipx2in((struct sockaddr_ipx *)to, &to_in);
 
         /* check if it's a broadcast */
-        if (to_ipx->sa_netnum[0] == 0 && to_ipx->sa_netnum[1] == 0 && to_ipx->sa_netnum[2] == 0 && to_ipx->sa_netnum[3] == 0)
+        if (is_ipx_broadcast((struct sockaddr_ipx *)to))
         {
             net_send(s, buf, len, &my_bcast);
             return len;
@@ -130,27 +159,35 @@ int WINAPI fake_setsockopt(SOCKET s, int level, int optname, const char *optval,
 
 int WINAPI fake_getsockname(SOCKET s, struct sockaddr *name, int *namelen)
 {
-    struct sockaddr_ipx *ipx = (struct sockaddr_ipx *)name;
+    struct sockaddr_in name_in;
+    int name_in_len = sizeof(struct sockaddr_in);
+
     printf("getsockname(s=%d, name=%p, namelen=%p (%d)\n", s, name, namelen, *namelen);
 
-    char hostname[256];
-    struct hostent *he;
+    int ret = getsockname(s, (struct sockaddr *)&name_in, &name_in_len);
 
-    gethostname(hostname, 256);
-    he = gethostbyname(hostname);
-
-    printf("getsockname: local hostname: %s\n", hostname);
-
-    memset(name, 0x00, *namelen);
-    unsigned short port = htons(8054);
-    ipx->sa_family = AF_IPX;
-    memcpy(&ipx->sa_socket, &port, 2);
-
-    if (he)
+    if (ret == 0)
     {
-        printf("getsockname: local ip: %s\n", inet_ntoa(*(struct in_addr *)(he->h_addr_list[0])));
-        memcpy(ipx->sa_nodenum, (struct in_addr *)(he->h_addr_list[0]), 4);
-    }
+#if 0
+        /* this doesn't work, we have binded to 0.0.0.0 */
+        printf("getsockname: local ip: %s\n", inet_ntoa(name_in.sin_addr));
+        in2ipx(&name_in, (struct sockaddr_ipx *)name);
+#else
+        char hostname[256];
+        struct hostent *he;
 
-    return 0;
+        gethostname(hostname, 256);
+        he = gethostbyname(hostname);
+
+        printf("getsockname: local hostname: %s\n", hostname);
+
+        if (he)
+        {
+            printf("getsockname: local ip: %s\n", inet_ntoa(*(struct in_addr *)(he->h_addr_list[0])));
+            name_in.sin_addr = *(struct in_addr *)(he->h_addr_list[0]);
+            in2ipx(&name_in, (struct sockaddr_ipx *)name);
+        }
+#endif
+    }
+    return ret;
 }
