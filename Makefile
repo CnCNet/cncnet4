@@ -15,7 +15,7 @@ internet: src/wsock32.c src/wsock32_internet.c src/sockets.c src/loader.c
 	$(CC) $(CFLAGS) -DBUILD_DLL -DINTERNET -Wl,--enable-stdcall-fixup -shared -s -o wsock32-internet.dll src/wsock32.c src/wsock32_internet.c src/sockets.c src/config.c src/wsock32.def src/loader.c src/dll.o $(LIBS)
 
 launcher: src/launcher.c
-	$(CC) $(CFLAGS) -Wl,--enable-stdcall-fixup -s -o carmanet-launcher.exe src/launcher.c
+	$(CC) $(CFLAGS) -mwindows -Wl,--enable-stdcall-fixup -s -o carmanet-launcher.exe src/launcher.c
 
 server: src/server.c src/sockets.c src/sockets.h
 	gcc $(CFLAGS) -o carmanet-server src/server.c src/sockets.c
