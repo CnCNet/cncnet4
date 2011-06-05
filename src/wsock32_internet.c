@@ -25,16 +25,6 @@
 static struct sockaddr_in my_addr;
 static struct sockaddr_in my_server;
 
-BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpvReserved)
-{
-    if (fdwReason == DLL_PROCESS_ATTACH)
-    {
-        config_init();
-    }
-
-    return TRUE;
-}
-
 SOCKET WINAPI fake_socket(int af, int type, int protocol)
 {
     printf("socket(af=%08X, type=%08X, protocol=%08X)\n", af, type, protocol);
