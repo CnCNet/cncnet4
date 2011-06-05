@@ -93,7 +93,7 @@ int launch(const char *gameExe, const char *gameParams)
     {
         LPVOID remoteName, LoadLibraryFunc;
 
-        #define DLL_NAME "wsock32-lan.dll"
+        #define DLL_NAME "wsock32-internet.dll"
 
         LoadLibraryFunc = (LPVOID)GetProcAddress(GetModuleHandle("kernel32.dll"), "LoadLibraryA");
         remoteName = (LPVOID)VirtualAllocEx(pInfo.hProcess, NULL, strlen(DLL_NAME), MEM_RESERVE|MEM_COMMIT, PAGE_READWRITE);
