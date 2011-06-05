@@ -33,6 +33,8 @@ typedef struct
 #define SOFT_TIMEOUT 5
 #define HARD_TIMEOUT 3600
 
+#define STAT_INTERVAL 5
+
 carmanet_client clients[MAX_CLIENTS];
 uint32_t boot = 0;
 uint32_t now = 0;
@@ -155,6 +157,15 @@ int main(int argc, char **argv)
 
     char status[256] = { 0 };
 
+    uint32_t last_packets = 0;
+    uint32_t last_bytes = 0;
+    uint32_t last_time = 0;
+
+    uint32_t total_packets = 0;
+    uint32_t total_bytes = 0;
+    uint32_t bps = 0;
+    uint32_t pps = 0;
+
     while(1)
     {
         int i;
@@ -164,14 +175,16 @@ int main(int argc, char **argv)
         int len = 0;
         struct timeval tv = { 1, 0 };
         fd_set read_fds;
-        char buf[1024];
+        char buf[512];
 
         FD_ZERO(&read_fds);
         FD_SET(sock, &read_fds);
 
         if (select(sock + 1, &read_fds, NULL, NULL, &tv) > 0)
         {
-            len = net_recv(sock, buf, 1024, &addr);
+            len = net_recv(sock, buf, 512, &addr);
+            total_packets++;
+            total_bytes += len;
         }
 
         now = time(NULL);
@@ -209,8 +222,18 @@ int main(int argc, char **argv)
             }
         }
 
-        sprintf(status, "CarmaNet [ %d online, %d idle, total %d/%d ]",
-                players_online, players_idle, players_online + players_idle, MAX_CLIENTS);
+        if (now >= last_time + STAT_INTERVAL)
+        {
+            int stat_elapsed = now - last_time ;
+            pps = (total_packets - last_packets) / stat_elapsed;
+            bps = (total_bytes - last_bytes) / stat_elapsed;
+            last_packets = total_packets;
+            last_bytes = total_bytes;
+            last_time = now;
+        }
+
+        sprintf(status, "CarmaNet [ %d online, %d idle, total %d/%d ] [ %d p/s, %d kB/s | total: %d p, %d kB ]",
+                players_online, players_idle, players_online + players_idle, MAX_CLIENTS, pps, bps / 1024, total_packets, total_bytes / 1024);
 
         printf("%s", status);
         fflush(NULL);
