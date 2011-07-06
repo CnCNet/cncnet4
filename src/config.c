@@ -15,15 +15,14 @@
  */
 
 #include "config.h"
-#include "sockets.h"
 
+#include <windows.h>
 #include <stdio.h>
 
 #define INI_NAME "carmanet.ini"
 
 char        config_server[64] = "hifi.iki.fi";
-uint16_t    config_server_port = NET_PORT;
-uint16_t    config_port = NET_PORT;
+uint16_t    config_server_port = 8055;
 
 void config_init()
 {
@@ -41,9 +40,7 @@ void config_init()
             "Server=%s\n"
             "; lobby server port\n"
             "ServerPort=%d\n"
-            "; client port (our)\n"
-            "Port=%d\n"
-        , config_server, config_server_port, config_port);
+        , config_server, config_server_port);
         fclose(fh);
     }
 
@@ -54,11 +51,5 @@ void config_init()
     if(itmp > 1024 && itmp < 65535)
     {
         config_server_port = (uint16_t)itmp;
-    }
-
-    itmp = GetPrivateProfileIntA("CarmaNet", "Port", config_port, ini_path);
-    if(itmp > 1024 && itmp < 65535)
-    {
-        config_port = (uint16_t)itmp;
     }
 }

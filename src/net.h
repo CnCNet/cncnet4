@@ -1,6 +1,5 @@
 /*
- * Copyright (c) 2008, 2010
- *      Toni Spets <toni.spets@iki.fi>
+ * Copyright (c) 2011 Toni Spets <toni.spets@iki.fi>
  *
  * Permission to use, copy, modify, and distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -14,9 +13,6 @@
  * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
-
-#ifndef SOCKETS_H
-#define SOCKETS_H
 
 #ifdef WIN32
     #include <winsock.h>
@@ -39,17 +35,44 @@
 #endif
 
 #include <stdint.h>
+#include <unistd.h>
 
-#define NET_PORT 8055
+#define NET_BUF_SIZE 1024
 
-#define net_socket() socket(AF_INET, SOCK_DGRAM, 0)
-#define net_send(a, b, c, d) sendto(a, b, c, 0, (struct sockaddr *)d, sizeof(struct sockaddr))
-#define net_bind(a, b) bind(a, (struct sockaddr *)b, sizeof(struct sockaddr));
+enum
+{
+    CMD_DIRECT,
+    CMD_BROADCAST,
+    CMD_WHOAMI
+};
 
-int net_broadcast(uint16_t sock);
 int net_reuse(uint16_t sock);
-int net_address(struct sockaddr_in *addr, char *host, uint16_t port);
+int net_address(struct sockaddr_in *addr, const char *host, uint16_t port);
 void net_address_ex(struct sockaddr_in *addr, uint32_t ip, uint16_t port);
-int net_recv(uint16_t sock, char *buf, uint32_t len, struct sockaddr_in *who);
 
-#endif
+int net_init(const char *host, int16_t port);
+void net_free();
+
+int net_bind(const char *ip);
+
+int8_t net_read_int8();
+int16_t net_read_int16();
+int32_t net_read_int32();
+int64_t net_read_int64();
+int net_read_data(void *, size_t);
+int net_read_string(char *);
+
+int net_write_int8(int8_t);
+int net_write_int16(int16_t);
+int net_write_int32(int32_t);
+int net_write_int64(int64_t);
+int net_write_data(void *, size_t);
+int net_write_string(char *);
+
+int net_recv(struct sockaddr_in *);
+int net_send(struct sockaddr_in *);
+int net_send_noflush(struct sockaddr_in *dst);
+void net_send_discard();
+int net_broadcast();
+
+extern int net_socket;

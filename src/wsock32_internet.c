@@ -14,7 +14,7 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
-#include "sockets.h"
+#include "net.h"
 #include "config.h"
 
 #include <windows.h>
@@ -22,8 +22,7 @@
 #include <assert.h>
 #include <stdio.h>
 
-static struct sockaddr_in my_addr;
-static struct sockaddr_in my_server;
+struct sockaddr_in my_addr;
 
 SOCKET WINAPI fake_socket(int af, int type, int protocol)
 {
@@ -31,12 +30,26 @@ SOCKET WINAPI fake_socket(int af, int type, int protocol)
 
     if (af == AF_IPX)
     {
-        SOCKET s = net_socket();
-        net_address_ex(&my_addr, INADDR_ANY, config_port);
-        net_address(&my_server, config_server, config_server_port);
-        net_broadcast(s);
-        bind(s, (const struct sockaddr *)&my_addr, sizeof(struct sockaddr_in));
-        return s;
+        struct sockaddr_in server;
+
+        if (net_socket == 0)
+        {
+            config_init();
+            net_init(config_server, 8055);
+            net_bind("0.0.0.0");
+        }
+
+        net_write_int8(CMD_WHOAMI);
+        net_broadcast();
+
+        int len = net_recv(&server);
+        if (len == 5 && net_read_int8() == CMD_WHOAMI)
+        {
+            my_addr.sin_addr.s_addr = net_read_int32();
+            my_addr.sin_port = htons(8055);
+        }
+
+        return net_socket;
     }
 
     return socket(af, type, protocol);
@@ -46,7 +59,7 @@ int WINAPI fake_bind(SOCKET s, const struct sockaddr *name, int namelen)
 {
     printf("bind(s=%d, name=%p, namelen=%d)\n", s, name, namelen);
 
-    if (((struct sockaddr_ipx *)name)->sa_family == AF_IPX)
+    if (s == net_socket)
     {
         return 0;
     }
@@ -56,33 +69,33 @@ int WINAPI fake_bind(SOCKET s, const struct sockaddr *name, int namelen)
 
 int WINAPI fake_recvfrom(SOCKET s, char *buf, int len, int flags, struct sockaddr *from, int *fromlen)
 {
-    char my_buf[1024];
-    struct sockaddr_in from_in;
-
-    assert(sizeof(my_buf) > len);
-
-    int ret = net_recv(s, my_buf, len, &from_in);
-
-    if(ret > 0)
-    {
-        if (memcmp(&from_in, &my_server, sizeof(struct sockaddr_in)) == 0)
-        {
-            memcpy(&from_in.sin_addr.s_addr, my_buf, 4);
-            memcpy(&from_in.sin_port, my_buf + 4, 2);
-            memcpy(buf, my_buf + 6, ret - 6);
-            in2ipx(&from_in, (struct sockaddr_ipx *)from);
-            return ret - 6;
-        } else {
-            memcpy(buf, my_buf, ret);
-            in2ipx(&from_in, (struct sockaddr_ipx *)from);
-        }
-    }
-
 #ifdef _DEBUG
-    printf("recvfrom(s=%d, buf=%p, len=%d, flags=%08X, from=%p, fromlen=%p (%d) -> %d (err: %d)\n", s, buf, len, flags, from, fromlen, *fromlen, ret, WSAGetLastError());
+    printf("recvfrom(s=%d, buf=%p, len=%d, flags=%08X, from=%p, fromlen=%p (%d))\n", s, buf, len, flags, from, fromlen, *fromlen);
 #endif
 
-    return ret;
+    if (s == net_socket)
+    {
+        int ret;
+        struct sockaddr_in from_in;
+
+        ret = net_recv(&from_in);
+
+        if (ret > 0)
+        {
+            if (net_read_int8() == CMD_BROADCAST)
+            {
+                from_in.sin_addr.s_addr = net_read_int32();
+                from_in.sin_port = net_read_int16();
+            }
+
+            ret = net_read_data((void *)buf, len);
+            in2ipx(&from_in, (struct sockaddr_ipx *)from);
+        }
+
+        return ret;
+    }
+
+    return recvfrom(s, buf, len, flags, from, fromlen);
 }
 
 int WINAPI fake_sendto(SOCKET s, const char *buf, int len, int flags, const struct sockaddr *to, int tolen)
@@ -100,12 +113,17 @@ int WINAPI fake_sendto(SOCKET s, const char *buf, int len, int flags, const stru
         /* check if it's a broadcast */
         if (is_ipx_broadcast((struct sockaddr_ipx *)to))
         {
-            net_send(s, buf, len, &my_server);
+            net_write_int8(CMD_BROADCAST);
+            net_write_data((void *)buf, len);
+            net_broadcast();
             return len;
         }
-
-        net_send(s, buf, len, &to_in);
-        return len;
+        else
+        {
+            net_write_int8(CMD_DIRECT);
+            net_write_data((void *)buf, len);
+            net_send(&to_in);
+        }
     }
 
     return sendto(s, buf, len, flags, to, tolen);
@@ -148,35 +166,9 @@ int WINAPI fake_setsockopt(SOCKET s, int level, int optname, const char *optval,
 
 int WINAPI fake_getsockname(SOCKET s, struct sockaddr *name, int *namelen)
 {
-    struct sockaddr_in name_in;
-    int name_in_len = sizeof(struct sockaddr_in);
-
     printf("getsockname(s=%d, name=%p, namelen=%p (%d)\n", s, name, namelen, *namelen);
 
-    int ret = getsockname(s, (struct sockaddr *)&name_in, &name_in_len);
+    in2ipx(&my_addr, (struct sockaddr_ipx *)name);
 
-    if (ret == 0)
-    {
-#if 0
-        /* this doesn't work, we have binded to 0.0.0.0 */
-        printf("getsockname: local ip: %s\n", inet_ntoa(name_in.sin_addr));
-        in2ipx(&name_in, (struct sockaddr_ipx *)name);
-#else
-        char hostname[256];
-        struct hostent *he;
-
-        gethostname(hostname, 256);
-        he = gethostbyname(hostname);
-
-        printf("getsockname: local hostname: %s\n", hostname);
-
-        if (he)
-        {
-            printf("getsockname: local ip: %s\n", inet_ntoa(*(struct in_addr *)(he->h_addr_list[0])));
-            name_in.sin_addr = *(struct in_addr *)(he->h_addr_list[0]);
-            in2ipx(&name_in, (struct sockaddr_ipx *)name);
-        }
-#endif
-    }
-    return ret;
+    return 0;
 }

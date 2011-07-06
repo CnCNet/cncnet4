@@ -14,7 +14,7 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
-#include "sockets.h"
+#include "net.h"
 #include <windows.h>
 #include <wsipx.h>
 #include <assert.h>
@@ -30,12 +30,12 @@ SOCKET WINAPI fake_socket(int af, int type, int protocol)
 
     if (af == AF_IPX)
     {
-        SOCKET s = net_socket();
-        net_address_ex(&my_addr, INADDR_ANY, my_port);
-        net_address_ex(&my_bcast, INADDR_BROADCAST, my_port);
-        net_broadcast(s);
-        bind(s, (const struct sockaddr *)&my_addr, sizeof(struct sockaddr_in));
-        return s;
+        if (net_socket == 0)
+        {
+            net_init("0.0.0.0", 8055);
+            net_bind("0.0.0.0");
+        }
+        return net_socket;
     }
 
     return socket(af, type, protocol);
@@ -45,7 +45,7 @@ int WINAPI fake_bind(SOCKET s, const struct sockaddr *name, int namelen)
 {
     printf("bind(s=%d, name=%p, namelen=%d)\n", s, name, namelen);
 
-    if (((struct sockaddr_ipx *)name)->sa_family == AF_IPX)
+    if (s == net_socket)
     {
         return 0;
     }
@@ -57,18 +57,24 @@ int WINAPI fake_recvfrom(SOCKET s, char *buf, int len, int flags, struct sockadd
 {
     struct sockaddr_in from_in;
 
-    int ret = net_recv(s, buf, len, &from_in);
-
-    if(ret > 0)
-    {
-        in2ipx(&from_in, (struct sockaddr_ipx *)from);
-    }
-
 #ifdef _DEBUG
-    printf("recvfrom(s=%d, buf=%p, len=%d, flags=%08X, from=%p, fromlen=%p (%d) -> %d (err: %d)\n", s, buf, len, flags, from, fromlen, *fromlen, ret, WSAGetLastError());
+    printf("recvfrom(s=%d, buf=%p, len=%d, flags=%08X, from=%p, fromlen=%p (%d))\n", s, buf, len, flags, from, fromlen, *fromlen);
 #endif
 
-    return ret;
+    if (s == net_socket)
+    {
+        int ret = net_recv(&from_in);
+
+        if (ret > 0)
+        {
+            in2ipx(&from_in, (struct sockaddr_ipx *)from);
+            return net_read_data((void *)buf, len);
+        }
+
+        return ret;
+    }
+
+    return recvfrom(s, buf, len, flags, from, fromlen);
 }
 
 int WINAPI fake_sendto(SOCKET s, const char *buf, int len, int flags, const struct sockaddr *to, int tolen)
@@ -77,20 +83,22 @@ int WINAPI fake_sendto(SOCKET s, const char *buf, int len, int flags, const stru
     printf("sendto(s=%d, buf=%p, len=%d, flags=%08X, to=%p, tolen=%d\n", s, buf, len, flags, to, tolen);
 #endif
 
-    if (to->sa_family == AF_IPX)
+    if (s == net_socket)
     {
         struct sockaddr_in to_in;
 
         ipx2in((struct sockaddr_ipx *)to, &to_in);
 
+        net_write_data((void *)buf, len);
+
         /* check if it's a broadcast */
         if (is_ipx_broadcast((struct sockaddr_ipx *)to))
         {
-            net_send(s, buf, len, &my_bcast);
+            net_broadcast();
             return len;
         }
 
-        net_send(s, buf, len, &to_in);
+        net_send(&to_in);
         return len;
     }
 

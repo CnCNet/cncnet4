@@ -16,9 +16,13 @@
 
 #include "loader.h"
 #include "config.h"
+#include "net.h"
 
 #include <windows.h>
 #include <shlwapi.h>
+
+#include <stdio.h>
+#include <ctype.h>
 
 SOCKET WINAPI fake_socket(int af, int type, int protocol);
 int WINAPI fake_bind(SOCKET s, const struct sockaddr *name, int namelen);
@@ -55,6 +59,9 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpvReserved)
 {
     if (fdwReason == DLL_PROCESS_ATTACH)
     {
+        freopen("stdout.txt", "w", stdout);
+        setvbuf(stdout, NULL, _IONBF, 0);
+
         /* check if we were injected or loaded directly */
         char buf[256];
         GetModuleFileNameA(hinstDLL, buf, 256);
@@ -63,10 +70,11 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpvReserved)
         {
             loader(wsock32_inj);
         }
+    }
 
-#ifdef INTERNET
-        config_init();
-#endif
+    if (fdwReason == DLL_PROCESS_DETACH)
+    {
+        net_free();
     }
 
     return TRUE;

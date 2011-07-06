@@ -15,7 +15,7 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
-#include "sockets.h"
+#include "net.h"
 
 #include <stdio.h>
 #include <string.h>
@@ -38,7 +38,6 @@ typedef struct
 carmanet_client clients[MAX_CLIENTS];
 uint32_t boot = 0;
 uint32_t now = 0;
-int sock = 0;
 
 void reset_clients()
 {
@@ -110,13 +109,17 @@ carmanet_client *get_client(struct sockaddr_in *addr)
 }
 
 /* broadcasts a packet to all clients in lobby */
-void broadcast(carmanet_client *from, char *buf, int len)
+void broadcast(carmanet_client *from)
 {
-    char my_buf[1024];
+    int len;
+    char buf[1024];
 
-    memcpy(my_buf, &from->addr.sin_addr.s_addr, 4);
-    memcpy(my_buf + 4, &from->addr.sin_port, 2);
-    memcpy(my_buf + 6, buf, len);
+    len = net_read_data((void *)buf, 1024);
+
+    net_write_int8(CMD_BROADCAST);
+    net_write_int32(from->addr.sin_addr.s_addr);
+    net_write_int16(from->addr.sin_port);
+    net_write_data((void *)buf, len);
 
     from->last_packet = now;
 
@@ -125,35 +128,51 @@ void broadcast(carmanet_client *from, char *buf, int len)
     {
         if(clients[i].last_packet && &clients[i] != from)
         {
-            net_send(sock, my_buf, len + 6, &clients[i].addr);
+            net_send_noflush(&clients[i].addr);
         }
     }
+
+    net_send_discard();
 }
 
-void server_packet(char *buf, int len, struct sockaddr_in *addr)
+void whoami(carmanet_client *from)
+{
+    net_write_int8(CMD_WHOAMI);
+    net_write_int32(from->addr.sin_addr.s_addr);
+    net_send(&from->addr);
+}
+
+void server_packet(struct sockaddr_in *addr)
 {
     carmanet_client *cliptr;
 
     /* force port faking */
-    addr->sin_port = htons(NET_PORT);
+    addr->sin_port = htons(8055);
 
     cliptr = get_client(addr);
 
-    if(cliptr)
+    if (cliptr)
     {
-        broadcast(cliptr, buf, len);
+        switch (net_read_int8())
+        {
+            case CMD_BROADCAST:
+                broadcast(cliptr);
+                break;
+            case CMD_WHOAMI:
+                whoami(cliptr);
+                break;
+            default:
+                break;
+        }
     }
 }
 
 int main(int argc, char **argv)
 {
-    struct sockaddr_in listen;
-
     reset_clients();
 
-    sock = net_socket();
-    net_address_ex(&listen, INADDR_ANY, NET_PORT);
-    net_bind(sock, &listen);
+    net_init("0.0.0.0", 8055); // remote doesn't matter, we won't broadcast
+    net_bind("0.0.0.0");
 
     char status[256] = { 0 };
 
@@ -175,14 +194,13 @@ int main(int argc, char **argv)
         int len = 0;
         struct timeval tv = { 1, 0 };
         fd_set read_fds;
-        char buf[512];
 
         FD_ZERO(&read_fds);
-        FD_SET(sock, &read_fds);
+        FD_SET(net_socket, &read_fds);
 
-        if (select(sock + 1, &read_fds, NULL, NULL, &tv) > 0)
+        if (select(net_socket + 1, &read_fds, NULL, NULL, &tv) > 0)
         {
-            len = net_recv(sock, buf, 512, &addr);
+            len = net_recv(&addr);
             total_packets++;
             total_bytes += len;
         }
@@ -198,7 +216,7 @@ int main(int argc, char **argv)
 
         if (len)
         {
-            server_packet(buf, len, &addr);
+            server_packet(&addr);
         }
 
         for(i=0;i<MAX_CLIENTS;i++)
