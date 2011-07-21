@@ -50,7 +50,7 @@ int net_reuse(uint16_t sock);
 int net_address(struct sockaddr_in *addr, const char *host, uint16_t port);
 void net_address_ex(struct sockaddr_in *addr, uint32_t ip, uint16_t port);
 
-int net_init(const char *host, int16_t port);
+int net_init();
 void net_free();
 
 int net_bind(const char *ip);
@@ -73,6 +73,7 @@ int net_recv(struct sockaddr_in *);
 int net_send(struct sockaddr_in *);
 int net_send_noflush(struct sockaddr_in *dst);
 void net_send_discard();
+void net_peer_add(const char *host, int16_t port);
 int net_broadcast();
 
 extern int net_socket;

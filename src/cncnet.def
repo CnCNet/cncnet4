@@ -1,12 +1,12 @@
-LIBRARY     wsock32.dll
+LIBRARY     cncnet.dll
 
 EXPORTS
     accept                  = "system32\\wsock32".accept                   @1
     bind                    = fake_bind                                    @2
-    closesocket             = "system32\\wsock32".closesocket              @3
+    closesocket             = fake_closesocket                             @3
     connect                 = "system32\\wsock32".connect                  @4
     getpeername             = "system32\\wsock32".getpeername              @5
-    getsockname             = fake_getsockname                             @6
+    getsockname             = "system32\\wsock32".getsockname              @6
     getsockopt              = fake_getsockopt                              @7
     htonl                   = "system32\\wsock32".htonl                    @8
     htons                   = "system32\\wsock32".htons                    @9

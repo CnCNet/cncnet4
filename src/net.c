@@ -89,16 +89,15 @@ void net_address_ex(struct sockaddr_in *addr, uint32_t ip, uint16_t port)
     addr->sin_port = htons(port);
 }
 
-int net_init(const char *host, int16_t port)
+int net_init()
 {
 #ifdef WIN32
     WSADATA wsaData;
     WSAStartup(0x0101, &wsaData);
 #endif
+    net_port = 8054;
     net_socket = socket(AF_INET, SOCK_DGRAM, 0);
-    net_address_ex(&net_local, INADDR_ANY, port);
-    net_address(&net_server, host, port);
-    net_port = port;
+    net_address_ex(&net_local, INADDR_ANY, net_port);
     return net_socket;
 }
 
@@ -249,9 +248,13 @@ void net_send_discard()
     net_opos = 0;
 }
 
+void net_peer_add(const char *host, int16_t port)
+{
+    return;
+}
+
 int net_broadcast()
 {
-    printf("broadcasting\n");
     int ret = sendto(net_socket, net_obuf, net_opos, 0, (struct sockaddr *)&net_server, sizeof(struct sockaddr_in));
     net_opos = 0;
     return ret;

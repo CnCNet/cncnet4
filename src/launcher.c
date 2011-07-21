@@ -93,7 +93,7 @@ int launch(const char *gameExe, const char *gameParams)
     {
         LPVOID remoteName, LoadLibraryFunc;
 
-        #define DLL_NAME "wsock32-internet.dll"
+        #define DLL_NAME "cncnet.dll"
 
         LoadLibraryFunc = (LPVOID)GetProcAddress(GetModuleHandle("kernel32.dll"), "LoadLibraryA");
         remoteName = (LPVOID)VirtualAllocEx(pInfo.hProcess, NULL, strlen(DLL_NAME), MEM_RESERVE|MEM_COMMIT, PAGE_READWRITE);
@@ -114,5 +114,7 @@ int launch(const char *gameExe, const char *gameParams)
 
 int main(int argc, char **argv)
 {
-    return launch("CARM95.EXE", "-hires");
+    if (launch("RA95.DAT", "-LAN") == 1)
+        launch("RA95.EXE", "-LAN cncnet://123.123.123.123");
+    return 0;
 }
