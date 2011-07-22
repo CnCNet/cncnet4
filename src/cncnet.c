@@ -68,6 +68,11 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpvReserved)
         char buf[MAX_PATH];
         GetModuleFileNameA(hinstDLL, buf, sizeof(buf));
 
+        #ifdef _DEBUG
+        freopen("stdout.txt", "w", stdout);
+        setvbuf(stdout, NULL, _IONBF, 0); 
+        #endif
+
         if (StrStrIA(buf, "wsock32.dll") == NULL)
         {
             loader(cncnet_inj);
@@ -86,7 +91,7 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpvReserved)
         {
             params += 3;
             for (i = 0; i < strlen(params); i++)
-                if (params[i] == ' ')
+                if (params[i] == ' ' || params[i] == '/')
                     params[i] = '\0';
 
             char *addr = strtok(params, ",");
@@ -176,7 +181,7 @@ int WINAPI fake_recvfrom(SOCKET s, char *buf, int len, int flags, struct sockadd
 int WINAPI fake_sendto(SOCKET s, const char *buf, int len, int flags, const struct sockaddr *to, int tolen)
 {
 #ifdef _DEBUG
-    printf("sendto(s=%d, buf=%p, len=%d, flags=%08X, to=%p, tolen=%d\n", s, buf, len, flags, to, tolen);
+    printf("sendto(s=%d, buf=%p, len=%d, flags=%08X, to=%p, tolen=%d)\n", s, buf, len, flags, to, tolen);
 #endif
 
     if (to->sa_family == AF_IPX)
