@@ -61,6 +61,10 @@ char *GetFile(const char *path)
     return buf;
 }
 
+int protocol_exists();
+int protocol_register(const char *name, const char *exe);
+int protocol_unregister(const char *name);
+
 int launch(const char *gameExe, const char *gameParams)
 {
     PROCESS_INFORMATION pInfo;
@@ -107,14 +111,119 @@ int launch(const char *gameExe, const char *gameParams)
     }
     else
     {
-        //MessageBoxA();
         return 1;
     }
 }
 
 int main(int argc, char **argv)
 {
-    if (launch("RA95.DAT", "-LAN") == 1)
-        launch("RA95.EXE", "-LAN cncnet://123.123.123.123");
-    return 0;
+    char *protocol = NULL;
+    char path[MAX_PATH];
+
+    GetModuleFileName(NULL, path, MAX_PATH);
+
+    if (FileExists("RA95.DAT") || FileExists("RA95.EXE"))
+    {
+        protocol = "ra95";
+    }
+    else if (FileExists("C&C95.EXE"))
+    {
+        protocol = "cnc95";
+    }
+
+    if (argc < 2)
+    {
+        if (protocol)
+        {
+            printf("Protocol is %s://, handler at %s\n", protocol, path);
+            if (protocol_register(protocol, path))
+            {
+                sprintf(path, "%s:// registered successfully!\n", protocol);
+                MessageBoxA(NULL, path, "CnCNet", MB_OK);
+            }
+            else
+            {
+                sprintf(path, "%s:// register failed :-(\n", protocol);
+                MessageBoxA(NULL, path, "CnCNet", MB_OK|MB_ICONERROR);
+            }
+        }
+        else
+        {
+            MessageBoxA(NULL, "Couldn't detect game, can't guess protocol handler", "CnCNet", MB_OK|MB_ICONERROR);
+        }
+        return 0;
+    }
+
+    snprintf(path, MAX_PATH-1, "-LAN %s", argv[1]);
+
+    if (FileExists("RA95.DAT"))
+    {
+        return launch("RA95.DAT", path);
+    }
+
+    if (FileExists("RA95.EXE"))
+    {
+        return launch("RA95.EXE", path);
+    }
+
+    if (FileExists("C&C95.EXE"))
+    {
+        return launch("R&95.EXE", path);
+    }
+
+    return 1;
+}
+
+int protocol_exists(const char *name)
+{
+    HKEY hKey;
+    return (RegOpenKey(HKEY_CLASSES_ROOT, name, &hKey) == ERROR_SUCCESS);
+}
+
+int protocol_register(const char *name, const char *exe)
+{
+    HKEY hKey;
+    char buf[MAX_PATH];
+
+    if (protocol_exists(name))
+    {
+        protocol_unregister(name);
+    }
+
+    sprintf(buf, "%s\\shell\\open\\command", name);
+
+    if (RegCreateKey(HKEY_CLASSES_ROOT, buf, &hKey) == ERROR_SUCCESS)
+    {
+        char path[MAX_PATH];
+        GetModuleFileName(NULL, path+1, MAX_PATH);
+        path[0] = '"';
+        strcat(path, "\" \"%1\"");
+        printf("cncnet-launcher at %s\n", path);
+        RegSetValue(HKEY_CLASSES_ROOT, name, REG_SZ, "URL:CnCNet Launcher Protocol", 0);
+
+        RegOpenKey(HKEY_CLASSES_ROOT, name, &hKey);
+        RegSetValueEx(hKey, "URL Protocol", 0, REG_SZ, (const BYTE *)"", 1);
+
+        return (RegSetValue(HKEY_CLASSES_ROOT, buf, REG_SZ, path, 0) == ERROR_SUCCESS);
+    }
+
+    return TRUE;
+}
+
+int protocol_unregister(const char *name)
+{
+    char buf[256];
+
+    if (!protocol_exists(name))
+    {
+        return TRUE;
+    }
+
+    sprintf(buf, "%s\\shell\\open\\command", name);
+    RegDeleteKey(HKEY_CLASSES_ROOT, buf);
+    sprintf(buf, "%s\\shell\\open", name);
+    RegDeleteKey(HKEY_CLASSES_ROOT, buf);
+    sprintf(buf, "%s\\shell", name);
+    RegDeleteKey(HKEY_CLASSES_ROOT, buf);
+    return (RegDeleteKey(HKEY_CLASSES_ROOT, name) == ERROR_SUCCESS);
 }
