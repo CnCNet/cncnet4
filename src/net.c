@@ -21,8 +21,10 @@
 
 #include <string.h>
 
+#define MAX_PEERS 64
+
 static struct sockaddr_in net_local;
-static struct sockaddr_in net_server;
+static struct sockaddr_in net_peers[MAX_PEERS];
 static uint8_t net_ibuf[NET_BUF_SIZE];
 static uint8_t net_obuf[NET_BUF_SIZE];
 static uint32_t net_ipos;
@@ -96,6 +98,7 @@ int net_init()
     WSAStartup(0x0101, &wsaData);
 #endif
     net_port = 8054;
+    memset(net_peers, 0, sizeof(net_peers));
     net_socket = socket(AF_INET, SOCK_DGRAM, 0);
     net_address_ex(&net_local, INADDR_ANY, net_port);
     return net_socket;
@@ -250,12 +253,31 @@ void net_send_discard()
 
 void net_peer_add(const char *host, int16_t port)
 {
-    return;
+    int i;
+
+    for (i = 0; i < MAX_PEERS; i++)
+    {
+        if (net_peers[i].sin_family == 0)
+        {
+            net_address(&net_peers[i], host, port);
+            break;
+        }
+    }
 }
 
 int net_broadcast()
 {
-    int ret = sendto(net_socket, net_obuf, net_opos, 0, (struct sockaddr *)&net_server, sizeof(struct sockaddr_in));
+    int i;
+
+    for (i = 0; i < MAX_PEERS; i++)
+    {
+        if (net_peers[i].sin_family == AF_INET)
+        {
+            sendto(net_socket, net_obuf, net_opos, 0, (struct sockaddr *)&net_peers[i], sizeof(struct sockaddr_in));
+        }
+    }
+
     net_opos = 0;
-    return ret;
+
+    return 0;
 }

@@ -65,18 +65,46 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpvReserved)
     if (fdwReason == DLL_PROCESS_ATTACH)
     {
         /* check if we were injected or loaded directly */
-        char buf[256];
-        GetModuleFileNameA(hinstDLL, buf, 256);
+        char buf[MAX_PATH];
+        GetModuleFileNameA(hinstDLL, buf, sizeof(buf));
 
         if (StrStrIA(buf, "wsock32.dll") == NULL)
         {
             loader(cncnet_inj);
         }
 
-        printf("cmdline: %s\n", GetCommandLine());
-
-        net_init("0.0.0.0", 8054);
+        net_init();
         net_bind("0.0.0.0");
+
+        strncpy(buf, GetCommandLine(), sizeof(buf));
+        printf("cmdline: %s\n", buf);
+
+        /* very crude URI parser */
+        int i;
+        char *params = strstr(buf, "://");
+        if (params)
+        {
+            params += 3;
+            for (i = 0; i < strlen(params); i++)
+                if (params[i] == ' ')
+                    params[i] = '\0';
+
+            char *addr = strtok(params, ",");
+            do
+            {
+                int16_t port = 8054;
+                char *str_port = strstr(params, ":");
+
+                if (str_port)
+                {
+                    *str_port = '\0';
+                    str_port++;
+                    port = atoi(str_port);
+                }
+
+                net_peer_add(addr, port);
+            } while ((addr = strtok(NULL, ",")));
+        }
     }
 
     if (fdwReason == DLL_PROCESS_DETACH)
