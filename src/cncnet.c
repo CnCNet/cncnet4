@@ -37,6 +37,17 @@ int WINAPI fake_getsockopt(SOCKET s, int level, int optname, char *optval, int *
 int WINAPI fake_setsockopt(SOCKET s, int level, int optname, const char *optval, int optlen);
 int WINAPI fake_closesocket(SOCKET s);
 
+int WINAPI _IPX_Initialise();
+int WINAPI _IPX_Open_Socket95(int s);
+int WINAPI _IPX_Start_Listening95();
+int WINAPI _IPX_Get_Outstanding_Buffer95(void *ptr);
+int WINAPI _IPX_Broadcast_Packet95(void *buf, int len);
+int WINAPI _IPX_Send_Packet95(void *ptr, void *buf, int len, void *unk1, void *unk2);
+int WINAPI _IPX_Get_Connection_Number95();
+int WINAPI _IPX_Get_Local_Target95(void *p1, void *p2, void *p3, void *p4);
+int WINAPI _IPX_Close_Socket95(int s);
+int WINAPI _IPX_Shut_Down95();
+
 struct iat_table cncnet_inj[] =
 {
     {
@@ -50,7 +61,23 @@ struct iat_table cncnet_inj[] =
             { 21,   "setsockopt",   fake_setsockopt },
             { 3,    "closesocket",  fake_closesocket },
             { 0, "", NULL }
-        }
+        },
+    },
+    {
+        "thipx32.dll",
+        {
+            { 0,    "_IPX_Initialise",                  _IPX_Initialise },
+            { 0,    "_IPX_Open_Socket95",               _IPX_Open_Socket95 },
+            { 0,    "_IPX_Start_Listening95",           _IPX_Start_Listening95 },
+            { 0,    "_IPX_Get_Outstanding_Buffer95",    _IPX_Get_Outstanding_Buffer95 },
+            { 0,    "_IPX_Broadcast_Packet95",          _IPX_Broadcast_Packet95 },
+            { 0,    "_IPX_Send_Packet95",               _IPX_Send_Packet95 },
+            { 0,    "_IPX_Get_Connection_Number95",     _IPX_Get_Connection_Number95 },
+            { 0,    "_IPX_Get_Local_Target95",          _IPX_Get_Local_Target95 },
+            { 0,    "_IPX_Close_Socket95",              _IPX_Close_Socket95 },
+            { 0,    "_IPX_Shut_Down95",                 _IPX_Shut_Down95 },
+            { 0, "", NULL }
+        },
     },
     {
         "",
@@ -73,9 +100,10 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpvReserved)
         setvbuf(stdout, NULL, _IONBF, 0); 
         #endif
 
-        if (StrStrIA(buf, "wsock32.dll") == NULL)
+        if (StrStrIA(buf, "wsock32.dll") == NULL && StrStrIA(buf, "thipx32.dll") == NULL)
         {
-            loader(cncnet_inj);
+            loader(&cncnet_inj[0]);
+            loader(&cncnet_inj[1]);
         }
 
         net_init();
@@ -211,6 +239,8 @@ int WINAPI fake_sendto(SOCKET s, const char *buf, int len, int flags, const stru
 
 int WINAPI fake_getsockopt(SOCKET s, int level, int optname, char *optval, int *optlen)
 {
+    printf("getsockopt(s=%d, level=%08X, optname=%08X, optval=%p, optlen=%p (%d))\n", s, level, optname, optval, optlen, *optlen);
+
     if (level == 0x3E8)
     {
         *optval = 1;
@@ -254,4 +284,132 @@ int WINAPI fake_closesocket(SOCKET s)
     }
 
     return closesocket(s);
+}
+
+int WINAPI _IPX_Initialise()
+{
+    printf("_IPX_Initialise()\n");
+    return 1;
+}
+
+int WINAPI _IPX_Open_Socket95(int s)
+{
+    printf("_IPX_Open_Socket95(s=%d)\n", s);
+    return 0;
+}
+
+int WINAPI _IPX_Start_Listening95()
+{
+    printf("_IPX_Start_Listening95()\n");
+    return 1;
+}
+
+int WINAPI _IPX_Get_Outstanding_Buffer95(void *ptr)
+{
+#if _DEBUG
+    printf("_IPX_Get_Outstanding_Buffer95(ptr=%p)\n", ptr);
+#endif
+
+    /* didn't bother to look up what kind of stuff is in the header so just nullin' it */
+    memset(ptr, 0, 30);
+
+    /* using some old magic */
+    int16_t *len = ptr + 2;
+    int *from_ip = ptr + 22;
+    int16_t *from_port = ptr + 26;
+    char *buf = ptr + 30;
+
+    struct sockaddr_in from;
+    struct timeval tv;
+    int ret;
+    int8_t cmd;
+
+    if (!net_socket)
+    {
+        return 0;
+    }
+
+    fd_set read_fds;
+    tv.tv_sec = 0;
+    tv.tv_usec = 0;
+
+    FD_ZERO(&read_fds);
+    FD_SET(net_socket, &read_fds);
+
+    select(net_socket+1, &read_fds, NULL, NULL, &tv);
+
+    if(FD_ISSET(net_socket, &read_fds))
+    {
+        ret = net_recv(&from);
+
+        *from_ip = from.sin_addr.s_addr;
+        *from_port = htons(8054);
+
+        if (ret == 0)
+        {
+            return 0;
+        }
+
+        cmd = net_read_int8();
+
+        if (cmd != CMD_BROADCAST && cmd != CMD_DIRECT)
+        {
+            return 0;
+        }
+
+        *len = htons(net_read_data(buf, 512) + 30);
+
+        return 1;
+    }
+
+    return 0;
+}
+
+int WINAPI _IPX_Broadcast_Packet95(void *buf, int len)
+{
+#ifdef _DEBUG
+    printf("_IPX_Broadcast_Packet95(buf=%p, len=%d)\n", buf, len);
+#endif
+    net_write_int8(CMD_BROADCAST);
+    net_write_data(buf, len);
+    return (net_broadcast() > 0);
+}
+
+int WINAPI _IPX_Send_Packet95(void *ptr, void *buf, int len, void *unk1, void *unk2)
+{
+#ifdef _DEBUG
+    printf("_IPX_Send_Packet95(ptr=%p, buf=%p, len=%d, unk1=%p, unk2=%p)\n", ptr, buf, len, unk1, unk2);
+#endif
+    struct sockaddr_in to;
+    to.sin_family = AF_INET;
+    to.sin_addr.s_addr = *(int32_t *)ptr;
+    to.sin_port = *(int16_t *)(ptr + 4);
+
+    net_write_int8(CMD_DIRECT);
+    net_write_data(buf, len);
+    return (net_send(&to) > 0);
+}
+
+int WINAPI _IPX_Get_Connection_Number95()
+{
+    printf("_IPX_Get_Connection_Number95()\n");
+    return 0;
+}
+
+int WINAPI _IPX_Get_Local_Target95(void *p1, void *p2, void *p3, void *p4)
+{
+    printf("_IPX_Get_Local_Target95(p1=%p, p2=%p, p3=%p, p4=%p)\n", p1, p2, p3, p4);
+    return 1;
+}
+
+int WINAPI _IPX_Close_Socket95(int s)
+{
+    printf("_IPX_Close_Socket95(s=%d)\n", s);
+    return 0;
+}
+
+int WINAPI _IPX_Shut_Down95()
+{
+    printf("_IPX_Shut_Down95()\n");
+    return 1;
 }

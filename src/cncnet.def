@@ -36,3 +36,14 @@ EXPORTS
     WSACleanup              = "system32\\wsock32".WSACleanup               @116
     __WSAFDIsSet            = "system32\\wsock32".__WSAFDIsSet             @151
     EnumProtocolsA          = "system32\\wsock32".EnumProtocolsA           @1111
+
+    _IPX_Initialise                                                        @9001
+    _IPX_Open_Socket95                                                     @9002
+    _IPX_Get_Outstanding_Buffer95                                          @9003
+    _IPX_Broadcast_Packet95                                                @9004
+    _IPX_Send_Packet95                                                     @9005
+    _IPX_Get_Connection_Number95                                           @9006
+    _IPX_Start_Listening95                                                 @9007
+    _IPX_Get_Local_Target95                                                @9008
+    _IPX_Close_Socket95                                                    @9009
+    _IPX_Shut_Down95                                                       @9010

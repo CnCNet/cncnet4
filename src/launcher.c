@@ -174,7 +174,7 @@ int main(int argc, char **argv)
 
     if (FileExists("C&C95.EXE"))
     {
-        return launch("R&95.EXE", path);
+        return launch("C&C95.EXE", path);
     }
 
     return 1;
