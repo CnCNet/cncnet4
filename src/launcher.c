@@ -122,6 +122,12 @@ int main(int argc, char **argv)
 
     GetModuleFileName(NULL, path, MAX_PATH);
 
+    char *dir = GetDirectory(path);
+    if (dir)
+    {
+        SetCurrentDirectoryA(dir);
+    }
+
     if (FileExists("RA95.DAT") || FileExists("RA95.EXE"))
     {
         protocol = "ra95";
