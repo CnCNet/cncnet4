@@ -149,18 +149,21 @@ int WINAPI fake_recvfrom(SOCKET s, char *buf, int len, int flags, struct sockadd
     {
         int ret;
         struct sockaddr_in from_in;
+        int8_t cmd;
 
         ret = net_recv(&from_in);
 
         if (ret > 0)
         {
-            if (net_read_int8() == CMD_BROADCAST)
+            cmd = net_read_int8();
+
+            if (cmd != CMD_BROADCAST && cmd != CMD_DIRECT)
             {
-                from_in.sin_addr.s_addr = net_read_int32();
-                from_in.sin_port = net_read_int16();
+                return 0;
             }
 
             ret = net_read_data((void *)buf, len);
+            from_in.sin_port = htons(8054);
             in2ipx(&from_in, (struct sockaddr_ipx *)from);
         }
 
@@ -194,7 +197,7 @@ int WINAPI fake_sendto(SOCKET s, const char *buf, int len, int flags, const stru
         {
             net_write_int8(CMD_DIRECT);
             net_write_data((void *)buf, len);
-            net_send(&to_in);
+            return net_send(&to_in);
         }
     }
 

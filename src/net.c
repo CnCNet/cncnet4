@@ -166,7 +166,7 @@ int net_read_data(void *ptr, size_t len)
 {
     if (net_ipos + len > net_ilen)
     {
-        len = net_ilen;
+        len = net_ilen - net_ipos;
     }
 
     memcpy(ptr, net_ibuf + net_ipos, len);

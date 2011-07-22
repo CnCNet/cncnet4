@@ -1,5 +1,5 @@
 CC=i586-mingw32msvc-gcc
-CFLAGS=-O2 -s -Wall -D_DEBUG
+CFLAGS=-O2 -s -Wall
 WINDRES=i586-mingw32msvc-windres
 LIBS=-lws2_32
 REV=$(shell sh -c 'git rev-parse --short @{0}')
