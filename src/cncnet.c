@@ -122,33 +122,33 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpvReserved)
             for (i = 0; i < strlen(params); i++)
                 if (params[i] == ' ' || params[i] == '/')
                     params[i] = '\0';
-        }
 
-        if (strlen(params))
-        {
-
-            char *addr = strtok(params, ",");
-            do
+            if (strlen(params))
             {
-                int16_t port = 8054;
-                char *str_port = strstr(params, ":");
 
-                if (str_port)
+                char *addr = strtok(params, ",");
+                do
                 {
-                    *str_port = '\0';
-                    str_port++;
-                    port = atoi(str_port);
-                }
+                    int16_t port = 8054;
+                    char *str_port = strstr(params, ":");
 
-                net_peer_add(addr, port);
-                peers++;
-            } while ((addr = strtok(NULL, ",")));
-        }
+                    if (str_port)
+                    {
+                        *str_port = '\0';
+                        str_port++;
+                        port = atoi(str_port);
+                    }
 
-        /* if no peers listed, play a LAN game */
-        if (!peers)
-        {
-            net_peer_add("255.255.255.255", 8054);
+                    net_peer_add(addr, port);
+                    peers++;
+                } while ((addr = strtok(NULL, ",")));
+            }
+
+            /* if no peers listed, play a LAN game */
+            if (!peers)
+            {
+                net_peer_add("255.255.255.255", 8054);
+            }
         }
     }
 
