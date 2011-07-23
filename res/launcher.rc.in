@@ -1,4 +1,10 @@
+#include <windows.h>
+
 1 VERSIONINFO
+FILEVERSION 3,0,0,0
+PRODUCTVERSION 3,0,0,0
+FILEOS VOS_NT
+FILETYPE VFT_APP
 {
     BLOCK "StringFileInfo"
     {
@@ -10,10 +16,9 @@
             VALUE "InternalName", "__FILE__"
             VALUE "LegalCopyright", "Copyright (c) 2008, 2010, 2011 Toni Spets"
             VALUE "LegalTrademarks", ""
-            VALUE "OriginalFileName", "__FILE__.dll"
+            VALUE "OriginalFileName", "__FILE__.exe"
             VALUE "ProductName", ""
             VALUE "ProductVersion", "git __REV__"
-            VALUE "Comments", ""
         }
     }
 
@@ -22,3 +27,7 @@
         VALUE "Translation",  0x0409, 0x04B0
     }
 }
+
+small   ICON "res/cncnet-16x16.ico"
+medium  ICON "res/cncnet-32x32.ico"
+large   ICON "res/cncnet-48x48.ico"
