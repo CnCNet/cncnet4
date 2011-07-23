@@ -102,7 +102,9 @@ int launch(const char *gameExe, const char *gameParams)
         LoadLibraryFunc = (LPVOID)GetProcAddress(GetModuleHandle("kernel32.dll"), "LoadLibraryA");
         remoteName = (LPVOID)VirtualAllocEx(pInfo.hProcess, NULL, strlen(DLL_NAME), MEM_RESERVE|MEM_COMMIT, PAGE_READWRITE);
         WriteProcessMemory(pInfo.hProcess, (LPVOID)remoteName, DLL_NAME, strlen(DLL_NAME), NULL);
-        CreateRemoteThread(pInfo.hProcess, NULL, 0, (LPTHREAD_START_ROUTINE)LoadLibraryFunc, (LPVOID)remoteName, 0, NULL);
+        HANDLE hThread = CreateRemoteThread(pInfo.hProcess, NULL, 0, (LPTHREAD_START_ROUTINE)LoadLibraryFunc, (LPVOID)remoteName, 0, NULL);
+
+        WaitForSingleObject(hThread, INFINITE);
 
         ResumeThread(pInfo.hThread);
         CloseHandle(pInfo.hProcess);
