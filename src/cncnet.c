@@ -143,12 +143,12 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpvReserved)
                     peers++;
                 } while ((addr = strtok(NULL, ",")));
             }
+        }
 
-            /* if no peers listed, play a LAN game */
-            if (!peers)
-            {
-                net_peer_add("255.255.255.255", 8054);
-            }
+        /* if no peers listed, play a LAN game */
+        if (!peers)
+        {
+            net_peer_add("255.255.255.255", 8054);
         }
     }
 
