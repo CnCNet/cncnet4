@@ -60,10 +60,17 @@ int is_ipx_broadcast(struct sockaddr_ipx *addr)
 }
 #endif
 
-int net_reuse(uint16_t sock)
+int net_opt_reuse(uint16_t sock)
 {
     int yes = 1;
     setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, (char *) &yes, sizeof(yes));
+    return yes;
+}
+
+int net_opt_broadcast(uint16_t sock)
+{
+    int yes = 1;
+    setsockopt(sock, SOL_SOCKET, SO_BROADCAST, (char *) &yes, sizeof(yes));
     return yes;
 }
 
@@ -121,7 +128,8 @@ int net_bind(const char *ip)
     }
 
     net_address(&net_local, ip, net_port);
-    net_reuse(net_socket);
+    net_opt_reuse(net_socket);
+    net_opt_broadcast(net_socket);
 
     return bind(net_socket, (struct sockaddr *)&net_local, sizeof(net_local));
 }

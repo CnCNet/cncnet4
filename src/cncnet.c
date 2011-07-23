@@ -113,14 +113,19 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpvReserved)
         printf("cmdline: %s\n", buf);
 
         /* very crude URI parser */
-        int i;
+        int i,peers = 0;
         char *params = strstr(buf, "://");
         if (params)
         {
             params += 3;
+
             for (i = 0; i < strlen(params); i++)
                 if (params[i] == ' ' || params[i] == '/')
                     params[i] = '\0';
+        }
+
+        if (strlen(params))
+        {
 
             char *addr = strtok(params, ",");
             do
@@ -136,7 +141,14 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpvReserved)
                 }
 
                 net_peer_add(addr, port);
+                peers++;
             } while ((addr = strtok(NULL, ",")));
+        }
+
+        /* if no peers listed, play a LAN game */
+        if (!peers)
+        {
+            net_peer_add("255.255.255.255", 8054);
         }
     }
 
