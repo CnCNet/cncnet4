@@ -161,7 +161,7 @@ int protocol_register(const char *name, const char *exe)
     if (RegCreateKey(HKEY_CLASSES_ROOT, buf, &hKey) == ERROR_SUCCESS)
     {
         char path[MAX_PATH];
-        snprintf(path, MAX_PATH-1, "\"%s\" \"-LAN %%1\"", exe);
+        snprintf(path, MAX_PATH-1, "\"%s\" -LAN %%1", exe);
         RegSetValue(HKEY_CLASSES_ROOT, name, REG_SZ, "URL:CnCNet Launcher Protocol", 0);
 
         RegOpenKey(HKEY_CLASSES_ROOT, name, &hKey);

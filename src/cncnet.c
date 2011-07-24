@@ -51,7 +51,7 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpvReserved)
             params += 3;
 
             for (i = 0; i < strlen(params); i++)
-                if (params[i] == ' ' || params[i] == '/')
+                if (params[i] == ' ' || params[i] == '/' || params[i] == '"')
                     params[i] = '\0';
 
             if (strlen(params))
