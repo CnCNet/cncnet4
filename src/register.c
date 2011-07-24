@@ -28,9 +28,6 @@ BOOL FileExists(const char *path)
     return FALSE;
 }
 
-HANDLE hProcess = NULL;
-HANDLE hThread = NULL;
-
 // replacement for dirname() POSIX function (also keeps internal copy of the path)
 char *GetDirectory(const char *path)
 {
@@ -65,61 +62,11 @@ int protocol_exists();
 int protocol_register(const char *name, const char *exe);
 int protocol_unregister(const char *name);
 
-int launch(const char *gameExe, const char *gameParams)
-{
-    PROCESS_INFORMATION pInfo;
-    STARTUPINFOA sInfo;
-
-    char *gamePath = NULL;
-    char gameParamsFull[MAX_PATH];
-
-    printf("gameExe: %s, gameParams: %s\n", gameExe, gameParams);
-
-    if (!FileExists(gameExe))
-    {
-        printf("gameExe not found\n");
-        return 1;
-    }
-
-    gamePath = GetDirectory(gameExe);
-    if(gamePath)
-    {
-        SetCurrentDirectoryA(gamePath);
-    }
-
-    snprintf(gameParamsFull, MAX_PATH, "%s %s", GetFile(gameExe), gameParams);
-
-    ZeroMemory(&sInfo, sizeof(STARTUPINFO));
-    sInfo.cb = sizeof(sInfo);
-    ZeroMemory(&pInfo, sizeof(PROCESS_INFORMATION));
-
-    if(CreateProcessA(gameExe, (LPSTR)gameParamsFull, 0, 0, FALSE, CREATE_SUSPENDED, 0, 0, &sInfo, &pInfo))
-    {
-        LPVOID remoteName, LoadLibraryFunc;
-
-        #define DLL_NAME "cncnet.dll"
-
-        LoadLibraryFunc = (LPVOID)GetProcAddress(GetModuleHandle("kernel32.dll"), "LoadLibraryA");
-        remoteName = (LPVOID)VirtualAllocEx(pInfo.hProcess, NULL, strlen(DLL_NAME), MEM_RESERVE|MEM_COMMIT, PAGE_READWRITE);
-        WriteProcessMemory(pInfo.hProcess, (LPVOID)remoteName, DLL_NAME, strlen(DLL_NAME), NULL);
-        HANDLE hThread = CreateRemoteThread(pInfo.hProcess, NULL, 0, (LPTHREAD_START_ROUTINE)LoadLibraryFunc, (LPVOID)remoteName, 0, NULL);
-
-        WaitForSingleObject(hThread, INFINITE);
-
-        ResumeThread(pInfo.hThread);
-        CloseHandle(pInfo.hProcess);
-        CloseHandle(pInfo.hThread);
-        return 0;
-    }
-    else
-    {
-        return 1;
-    }
-}
-
 int main(int argc, char **argv)
 {
     char *protocol = NULL;
+    char *exe = NULL;
+    char *dll = "wsock32.dll";
     char path[MAX_PATH];
 
     GetModuleFileName(NULL, path, MAX_PATH);
@@ -130,14 +77,34 @@ int main(int argc, char **argv)
         SetCurrentDirectoryA(dir);
     }
 
-    if (FileExists("RA95.DAT") || FileExists("RA95.EXE"))
+    if (FileExists("RA95.DAT"))
     {
+        exe = "RA95.DAT";
+        protocol = "ra95";
+    }
+    else if (FileExists("RA95.EXE"))
+    {
+        exe = "RA95.EXE";
         protocol = "ra95";
     }
     else if (FileExists("C&C95.EXE"))
     {
+        exe = "C&C95.EXE";
         protocol = "cnc95";
+        dll = "thipx32.dll";
     }
+    else if (FileExists("SUN.EXE"))
+    {
+        exe = "GAME.EXE";
+        protocol = "ts";
+    }
+    else if (FileExists("RA2.EXE"))
+    {
+        exe = "GAME.EXE";
+        protocol = "ra2";
+    }
+
+    snprintf(path, MAX_PATH-1, "%s%s", dir, exe);
 
     if (argc < 2)
     {
@@ -146,6 +113,14 @@ int main(int argc, char **argv)
             printf("Protocol is %s://, handler at %s\n", protocol, path);
             if (protocol_register(protocol, path))
             {
+                if (FileExists("cncnet.dll"))
+                {
+                    if (FileExists(dll))
+                    {
+                        DeleteFile(dll);
+                    }
+                    MoveFile("cncnet.dll", dll);
+                }
                 sprintf(path, "%s:// registered successfully!\n", protocol);
                 MessageBoxA(NULL, path, "CnCNet", MB_OK);
             }
@@ -160,23 +135,6 @@ int main(int argc, char **argv)
             MessageBoxA(NULL, "Couldn't detect game, can't guess protocol handler", "CnCNet", MB_OK|MB_ICONERROR);
         }
         return 0;
-    }
-
-    snprintf(path, MAX_PATH-1, "-LAN %s", argv[1]);
-
-    if (FileExists("RA95.DAT"))
-    {
-        return launch("RA95.DAT", path);
-    }
-
-    if (FileExists("RA95.EXE"))
-    {
-        return launch("RA95.EXE", path);
-    }
-
-    if (FileExists("C&C95.EXE"))
-    {
-        return launch("C&C95.EXE", path);
     }
 
     return 1;
@@ -203,10 +161,7 @@ int protocol_register(const char *name, const char *exe)
     if (RegCreateKey(HKEY_CLASSES_ROOT, buf, &hKey) == ERROR_SUCCESS)
     {
         char path[MAX_PATH];
-        GetModuleFileName(NULL, path+1, MAX_PATH);
-        path[0] = '"';
-        strcat(path, "\" \"%1\"");
-        printf("cncnet-launcher at %s\n", path);
+        snprintf(path, MAX_PATH-1, "\"%s\" \"-LAN %%1\"", exe);
         RegSetValue(HKEY_CLASSES_ROOT, name, REG_SZ, "URL:CnCNet Launcher Protocol", 0);
 
         RegOpenKey(HKEY_CLASSES_ROOT, name, &hKey);
