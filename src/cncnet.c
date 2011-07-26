@@ -139,7 +139,6 @@ int WINAPI fake_recvfrom(SOCKET s, char *buf, int len, int flags, struct sockadd
             }
 
             ret = net_read_data((void *)buf, len);
-            from_in.sin_port = htons(8054);
             in2ipx(&from_in, (struct sockaddr_ipx *)from);
         }
 
@@ -286,7 +285,7 @@ int WINAPI _IPX_Get_Outstanding_Buffer95(void *ptr)
         ret = net_recv(&from);
 
         *from_ip = from.sin_addr.s_addr;
-        *from_port = htons(8054);
+        *from_port = from.sin_port;
 
         if (ret == 0)
         {
