@@ -31,7 +31,7 @@ static uint32_t net_ipos;
 static uint32_t net_ilen;
 static uint32_t net_opos;
 int net_socket = 0;
-int16_t net_port;
+int net_late_join = 0;
 
 #ifdef WIN32
 void ipx2in(struct sockaddr_ipx *from, struct sockaddr_in *to)
@@ -83,8 +83,6 @@ int net_address(struct sockaddr_in *addr, const char *host, uint16_t port)
         return FALSE;
     }
 
-    fprintf(stderr, "Host resolved to '%s'\n", inet_ntoa(*(struct in_addr *)hent->h_addr_list[0]));
-
     net_address_ex(addr, *(int *)hent->h_addr_list[0], port);
     return TRUE;
 }
@@ -104,10 +102,8 @@ int net_init()
     WSADATA wsaData;
     WSAStartup(0x0101, &wsaData);
 #endif
-    net_port = 8054;
     memset(net_peers, 0, sizeof(net_peers));
     net_socket = socket(AF_INET, SOCK_DGRAM, 0);
-    net_address_ex(&net_local, INADDR_ANY, net_port);
     return net_socket;
 }
 
@@ -120,14 +116,14 @@ void net_free()
 #endif
 }
 
-int net_bind(const char *ip)
+int net_bind(const char *ip, int port)
 {
     if (!net_socket)
     {
         return 0;
     }
 
-    net_address(&net_local, ip, net_port);
+    net_address(&net_local, ip, port);
     net_opt_reuse(net_socket);
     net_opt_broadcast(net_socket);
 
@@ -259,18 +255,66 @@ void net_send_discard()
     net_opos = 0;
 }
 
-void net_peer_add(const char *host, int16_t port)
+void net_peer_add_by_host(const char *host, int16_t port)
+{
+    struct sockaddr_in peer;
+
+    net_address(&peer, host, port);
+    net_peer_add(&peer);
+}
+
+int net_peer_add(struct sockaddr_in *peer)
 {
     int i;
 
+    /* check if already exists */
+    for (i = 0; i < MAX_PEERS; i++)
+    {
+        if (net_peers[i].sin_family && net_peers[i].sin_addr.s_addr == peer->sin_addr.s_addr && net_peers[i].sin_port == peer->sin_port)
+        {
+            return 1;
+        }
+    }
+
+    /* add to peers list if not */
     for (i = 0; i < MAX_PEERS; i++)
     {
         if (net_peers[i].sin_family == 0)
         {
-            net_address(&net_peers[i], host, port);
-            break;
+            printf("CnCNet: New peer added to broadcast list %s:%d\n", inet_ntoa(peer->sin_addr), ntohs(peer->sin_port));
+            memcpy(&net_peers[i], peer, sizeof(struct sockaddr_in));
+            return 1;
         }
     }
+
+    return 0;
+}
+
+int net_peer_ok(struct sockaddr_in *peer)
+{
+    int i;
+
+    /* in LAN mode, don't pollute the broadcast list */
+    if (net_late_join > 1)
+    {
+        return 1;
+    }
+
+    if (net_late_join)
+    {
+        return net_peer_add(peer);
+    }
+
+    for (i = 0; i < MAX_PEERS; i++)
+    {
+        /* allow any port from a known address, fixes some NAT problems  */
+        if (net_peers[i].sin_addr.s_addr == peer->sin_addr.s_addr)
+        {
+            return net_peer_add(peer);
+        }
+    }
+
+    return 0;
 }
 
 int net_broadcast()

@@ -30,6 +30,7 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpvReserved)
 {
     if (fdwReason == DLL_PROCESS_ATTACH)
     {
+        int my_port = 8054;
         char buf[MAX_PATH];
 
         #ifdef _DEBUG
@@ -37,11 +38,11 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpvReserved)
         setvbuf(stdout, NULL, _IONBF, 0); 
         #endif
 
+        printf("CnCNet: Init\n");
+
         net_init();
-        net_bind("0.0.0.0");
 
         strncpy(buf, GetCommandLine(), sizeof(buf));
-        printf("cmdline: %s\n", buf);
 
         /* very crude URI parser */
         int i,peers = 0;
@@ -63,15 +64,28 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpvReserved)
                     int16_t port = 8054;
                     char *str_port = strstr(params, ":");
 
-                    if (str_port)
+                    if (str_port && strlen(str_port) > 1)
                     {
                         *str_port = '\0';
                         str_port++;
                         port = atoi(str_port);
                     }
 
-                    net_peer_add(addr, port);
-                    peers++;
+                    if (strcmp(addr, "latejoin") == 0)
+                    {
+                        printf("CnCNet: Enabled late joining\n");
+                        net_late_join = 1;
+                    }
+                    else if (strncmp(addr, "port=", 5) == 0 && strlen(addr) > 5)
+                    {
+                        my_port = atoi(addr+5);
+                        printf("CnCNet: Set our listening port to %d\n", my_port);
+                    }
+                    else
+                    {
+                        net_peer_add_by_host(addr, port);
+                        peers++;
+                    }
                 } while ((addr = strtok(NULL, ",")));
             }
         }
@@ -79,8 +93,12 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpvReserved)
         /* if no peers listed, play a LAN game */
         if (!peers)
         {
-            net_peer_add("255.255.255.255", 8054);
+            printf("CnCNet: Enabled LAN mode\n");
+            net_late_join = 2;
+            net_peer_add_by_host("255.255.255.255", 8054);
         }
+
+        net_bind("0.0.0.0", my_port);
     }
 
     if (fdwReason == DLL_PROCESS_DETACH)
@@ -128,6 +146,12 @@ int WINAPI fake_recvfrom(SOCKET s, char *buf, int len, int flags, struct sockadd
         int8_t cmd;
 
         ret = net_recv(&from_in);
+
+        /* check if allowed peer */
+        if (!net_peer_ok(&from_in))
+        {
+            return 0;
+        }
 
         if (ret > 0)
         {
@@ -283,6 +307,12 @@ int WINAPI _IPX_Get_Outstanding_Buffer95(void *ptr)
     if(FD_ISSET(net_socket, &read_fds))
     {
         ret = net_recv(&from);
+
+        /* check if allowed peer */
+        if (!net_peer_ok(&from))
+        {
+            return 0;
+        }
 
         *from_ip = from.sin_addr.s_addr;
         *from_port = from.sin_port;

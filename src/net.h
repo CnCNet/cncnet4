@@ -53,7 +53,7 @@ void net_address_ex(struct sockaddr_in *addr, uint32_t ip, uint16_t port);
 int net_init();
 void net_free();
 
-int net_bind(const char *ip);
+int net_bind(const char *ip, int port);
 
 int8_t net_read_int8();
 int16_t net_read_int16();
@@ -73,7 +73,10 @@ int net_recv(struct sockaddr_in *);
 int net_send(struct sockaddr_in *);
 int net_send_noflush(struct sockaddr_in *dst);
 void net_send_discard();
-void net_peer_add(const char *host, int16_t port);
+void net_peer_add_by_host(const char *host, int16_t port);
+int net_peer_add(struct sockaddr_in *peer);
+int net_peer_ok(struct sockaddr_in *peer);
 int net_broadcast();
 
 extern int net_socket;
+extern int net_late_join;
