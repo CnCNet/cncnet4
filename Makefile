@@ -1,7 +1,7 @@
 CC=i586-mingw32msvc-gcc
-CFLAGS=-O2 -s -Wall
+CFLAGS=-O2 -s -Wall -D_WIN_VER
 WINDRES=i586-mingw32msvc-windres
-LIBS=-lws2_32
+LIBS=-L./lib/ -lws2_32 -lcrypt32
 REV=$(shell sh -c 'git rev-parse --short @{0}')
 
 all: dll register

@@ -17,7 +17,13 @@
 #include "net.h"
 
 #include <windows.h>
-#include <shlwapi.h>
+
+#ifdef __MINGW32__
+    WINBOOL WINAPI CryptStringToBinaryA(LPCSTR pszString,DWORD cchString,DWORD dwFlags,BYTE *pbBinary,DWORD *pcbBinary,DWORD *pdwSkip,DWORD *pdwFlags);
+    #define CRYPT_STRING_BASE64 0x1
+#else
+    #include <wincrypt.h>
+#endif
 
 #include <stdio.h>
 #include <ctype.h>
@@ -57,6 +63,16 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpvReserved)
 
             if (strlen(params))
             {
+                char cbuf[MAX_PATH];
+                DWORD csiz = sizeof(cbuf);
+
+                /* check for base64, this is only for added false feel of ip security */
+                if (params[0] == '@' && CryptStringToBinaryA(params+1, 0, CRYPT_STRING_BASE64, cbuf, &csiz, NULL, NULL)) {
+                    strncpy(buf, cbuf, csiz);
+                    buf[csiz] = '\0';
+                    printf("CnCNet: Decoded URI: %s (%d)\n", buf, csiz);
+                    params = buf;
+                }
 
                 char *addr = strtok(params, ",");
                 do
