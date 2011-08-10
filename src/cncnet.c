@@ -107,7 +107,7 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpvReserved)
         }
 
         /* if no peers listed, play a LAN game */
-        if (!peers)
+        if (!peers && net_late_join == 0)
         {
             printf("CnCNet: Enabled LAN mode\n");
             net_late_join = 2;
