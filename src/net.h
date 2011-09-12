@@ -79,4 +79,4 @@ int net_peer_ok(struct sockaddr_in *peer);
 int net_broadcast();
 
 extern int net_socket;
-extern int net_late_join;
+extern int net_open;

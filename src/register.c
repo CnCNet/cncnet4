@@ -93,6 +93,11 @@ int main(int argc, char **argv)
         protocol = "cnc95";
         dll = "thipx32.dll";
     }
+    else if (FileExists("DTA.DAT"))
+    {
+        exe = "DTA.DAT";
+        protocol = "ts";
+    }
     else if (FileExists("SUN.EXE"))
     {
         exe = "GAME.EXE";

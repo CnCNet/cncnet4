@@ -31,7 +31,7 @@ static uint32_t net_ipos;
 static uint32_t net_ilen;
 static uint32_t net_opos;
 int net_socket = 0;
-int net_late_join = 0;
+int net_open = 0;
 
 #ifdef WIN32
 void ipx2in(struct sockaddr_ipx *from, struct sockaddr_in *to)
@@ -295,12 +295,12 @@ int net_peer_ok(struct sockaddr_in *peer)
     int i;
 
     /* in LAN mode, don't pollute the broadcast list */
-    if (net_late_join > 1)
+    if (net_open > 1)
     {
         return 1;
     }
 
-    if (net_late_join)
+    if (net_open)
     {
         return net_peer_add(peer);
     }

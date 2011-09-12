@@ -15,15 +15,10 @@
  */
 
 #include "net.h"
+#include "base32.h"
+#include "uri.h"
 
 #include <windows.h>
-
-#ifdef __MINGW32__
-    WINBOOL WINAPI CryptStringToBinaryA(LPCSTR pszString,DWORD cchString,DWORD dwFlags,BYTE *pbBinary,DWORD *pcbBinary,DWORD *pdwSkip,DWORD *pdwFlags);
-    #define CRYPT_STRING_BASE64 0x1
-#else
-    #include <wincrypt.h>
-#endif
 
 #include <stdio.h>
 #include <ctype.h>
@@ -36,8 +31,9 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpvReserved)
 {
     if (fdwReason == DLL_PROCESS_ATTACH)
     {
-        int my_port = 8054;
+        int my_port = 8054, ret;
         char buf[MAX_PATH];
+        uri_handle *uri;
 
         #ifdef _DEBUG
         freopen("stdout.txt", "w", stdout);
@@ -50,67 +46,54 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpvReserved)
 
         strncpy(buf, GetCommandLine(), sizeof(buf));
 
-        /* very crude URI parser */
-        int i,peers = 0;
-        char *params = strstr(buf, "://");
-        if (params)
+        char *struri = strrchr(buf, ' ');
+        if (struri)
         {
-            params += 3;
+            struri++;
+            uri = uri_parse(struri);
+            printf("CnCNet: URI protocol: %s\n", uri->protocol);
+            printf("CnCNet: URI v4: %s\n", uri_value(uri, "v4"));
 
-            for (i = 0; i < strlen(params); i++)
-                if (params[i] == ' ' || params[i] == '/' || params[i] == '"')
-                    params[i] = '\0';
-
-            if (strlen(params))
+            if (uri_value(uri, "v4"))
             {
-                char cbuf[MAX_PATH];
-                DWORD csiz = sizeof(cbuf);
-
-                /* check for base64, this is only for added false feel of ip security */
-                if (params[0] == '@' && CryptStringToBinaryA(params+1, 0, CRYPT_STRING_BASE64, cbuf, &csiz, NULL, NULL)) {
-                    strncpy(buf, cbuf, csiz);
-                    buf[csiz] = '\0';
-                    printf("CnCNet: Decoded URI: %s (%d)\n", buf, csiz);
-                    params = buf;
-                }
-
-                char *addr = strtok(params, ",");
-                do
+                ret = base32_decode(uri_value(uri, "v4"), buf, sizeof(buf));
+                if (ret > 0)
                 {
-                    int16_t port = 8054;
-                    char *str_port = strstr(params, ":");
-
-                    if (str_port && strlen(str_port) > 1)
+                    int i;
+                    struct sockaddr_in peer;
+                    peer.sin_family = AF_INET;
+                    printf("CnCNet: Got %d peers\n", ret / 6);
+                    for (i = 0; i < ret / 6; i ++)
                     {
-                        *str_port = '\0';
-                        str_port++;
-                        port = atoi(str_port);
+                        memcpy(&peer.sin_addr.s_addr, buf + (i * 6), 4);
+                        memcpy(&peer.sin_port, buf + (i * 6) + 4, 2);
+                        net_peer_add(&peer);
                     }
-
-                    if (strcmp(addr, "latejoin") == 0)
-                    {
-                        printf("CnCNet: Enabled late joining\n");
-                        net_late_join = 1;
-                    }
-                    else if (strncmp(addr, "port=", 5) == 0 && strlen(addr) > 5)
-                    {
-                        my_port = atoi(addr+5);
-                        printf("CnCNet: Set our listening port to %d\n", my_port);
-                    }
-                    else
-                    {
-                        net_peer_add_by_host(addr, port);
-                        peers++;
-                    }
-                } while ((addr = strtok(NULL, ",")));
+                }
             }
+
+            if (uri_value(uri, "open"))
+            {
+                printf("CnCNet: Enabled open mode\n");
+                net_open = 1;
+            }
+
+            if (uri_value(uri, "port"))
+            {
+                my_port = atoi(uri_value(uri, "port"));
+                printf("CnCNet: Self port is %d\n", my_port);
+            }
+
+            uri_free(uri);
         }
 
+        int peers = 0;
+
         /* if no peers listed, play a LAN game */
-        if (!peers && net_late_join == 0)
+        if (!peers && net_open == 0)
         {
             printf("CnCNet: Enabled LAN mode\n");
-            net_late_join = 2;
+            net_open = 2;
             net_peer_add_by_host("255.255.255.255", 8054);
         }
 
