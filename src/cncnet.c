@@ -94,7 +94,8 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpvReserved)
         {
             printf("CnCNet: Enabled LAN mode\n");
             net_open = 2;
-            net_peer_add_by_host("255.255.255.255", 8054);
+            my_port = 5000;
+            net_peer_add_by_host("255.255.255.255", my_port);
         }
 
         net_bind("0.0.0.0", my_port);
@@ -142,7 +143,6 @@ int WINAPI fake_recvfrom(SOCKET s, char *buf, int len, int flags, struct sockadd
     {
         int ret;
         struct sockaddr_in from_in;
-        int8_t cmd;
 
         ret = net_recv(&from_in);
 
@@ -154,13 +154,6 @@ int WINAPI fake_recvfrom(SOCKET s, char *buf, int len, int flags, struct sockadd
 
         if (ret > 0)
         {
-            cmd = net_read_int8();
-
-            if (cmd != CMD_BROADCAST && cmd != CMD_DIRECT)
-            {
-                return 0;
-            }
-
             ret = net_read_data((void *)buf, len);
             in2ipx(&from_in, (struct sockaddr_ipx *)from);
         }
@@ -186,14 +179,12 @@ int WINAPI fake_sendto(SOCKET s, const char *buf, int len, int flags, const stru
         /* check if it's a broadcast */
         if (is_ipx_broadcast((struct sockaddr_ipx *)to))
         {
-            net_write_int8(CMD_BROADCAST);
             net_write_data((void *)buf, len);
             net_broadcast();
             return len;
         }
         else
         {
-            net_write_int8(CMD_DIRECT);
             net_write_data((void *)buf, len);
             return net_send(&to_in);
         }
@@ -287,7 +278,6 @@ int WINAPI _IPX_Get_Outstanding_Buffer95(void *ptr)
     struct sockaddr_in from;
     struct timeval tv;
     int ret;
-    int8_t cmd;
 
     if (!net_socket)
     {
@@ -321,13 +311,6 @@ int WINAPI _IPX_Get_Outstanding_Buffer95(void *ptr)
             return 0;
         }
 
-        cmd = net_read_int8();
-
-        if (cmd != CMD_BROADCAST && cmd != CMD_DIRECT)
-        {
-            return 0;
-        }
-
         *len = htons(net_read_data(buf, 512) + 30);
 
         return 1;
@@ -341,7 +324,6 @@ int WINAPI _IPX_Broadcast_Packet95(void *buf, int len)
 #ifdef _DEBUG
     printf("_IPX_Broadcast_Packet95(buf=%p, len=%d)\n", buf, len);
 #endif
-    net_write_int8(CMD_BROADCAST);
     net_write_data(buf, len);
     return (net_broadcast() > 0);
 }
@@ -356,7 +338,6 @@ int WINAPI _IPX_Send_Packet95(void *ptr, void *buf, int len, void *unk1, void *u
     to.sin_addr.s_addr = *(int32_t *)ptr;
     to.sin_port = *(int16_t *)(ptr + 4);
 
-    net_write_int8(CMD_DIRECT);
     net_write_data(buf, len);
     return (net_send(&to) > 0);
 }
