@@ -34,6 +34,7 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpvReserved)
         int my_port = 8054, ret;
         char buf[MAX_PATH];
         uri_handle *uri;
+        int peers = 0;
 
         #ifdef _DEBUG
         freopen("stdout.txt", "w", stdout);
@@ -62,7 +63,8 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpvReserved)
                     int i;
                     struct sockaddr_in peer;
                     peer.sin_family = AF_INET;
-                    printf("CnCNet: Got %d peers\n", ret / 6);
+                    peers = ret / 6;
+                    printf("CnCNet: Got %d peers\n", peers);
                     for (i = 0; i < ret / 6; i ++)
                     {
                         memcpy(&peer.sin_addr.s_addr, buf + (i * 6), 4);
@@ -72,22 +74,21 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpvReserved)
                 }
             }
 
-            if (uri_value(uri, "open"))
-            {
-                printf("CnCNet: Enabled open mode\n");
-                net_open = 1;
-            }
-
             if (uri_value(uri, "port"))
             {
                 my_port = atoi(uri_value(uri, "port"));
                 printf("CnCNet: Self port is %d\n", my_port);
             }
 
+            if (uri_value(uri, "open"))
+            {
+                printf("CnCNet: Enabled open mode, also bcasting to LAN port %d\n", my_port);
+                net_open = 1;
+                net_peer_add_by_host("255.255.255.255", my_port);
+            }
+
             uri_free(uri);
         }
-
-        int peers = 0;
 
         /* if no peers listed, play a LAN game */
         if (!peers && net_open == 0)
