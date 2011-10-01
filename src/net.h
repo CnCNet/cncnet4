@@ -14,6 +14,8 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
+#include <stdint.h>
+
 #ifdef WIN32
     #include <winsock.h>
     #include <winsock2.h>
@@ -21,6 +23,8 @@
 
     void ipx2in(struct sockaddr_ipx *from, struct sockaddr_in *to);
     void in2ipx(struct sockaddr_in *from, struct sockaddr_ipx *to);
+    uint8_t ipx2id(struct sockaddr_ipx *from);
+    void id2ipx(uint8_t peer_id, struct sockaddr_ipx *to);
     int is_ipx_broadcast(struct sockaddr_ipx *addr);
 
 #else
@@ -34,7 +38,6 @@
     #define FALSE 0
 #endif
 
-#include <stdint.h>
 #include <unistd.h>
 
 #define NET_BUF_SIZE 1024
@@ -68,6 +71,7 @@ int net_send_noflush(struct sockaddr_in *dst);
 void net_send_discard();
 void net_peer_add_by_host(const char *host, int16_t port);
 int net_peer_add(struct sockaddr_in *peer);
+struct sockaddr_in *net_peer_get(int i);
 int net_peer_ok(struct sockaddr_in *peer);
 int net_broadcast();
 

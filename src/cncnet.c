@@ -27,13 +27,16 @@
 #include <assert.h>
 #include <stdio.h>
 
+int dedicated = 0;
+
 BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpvReserved)
 {
     if (fdwReason == DLL_PROCESS_ATTACH)
     {
         int my_port = 8054, ret;
         char buf[MAX_PATH];
-        uri_handle *uri;
+        uri_handle *uri = NULL;
+        char *struri;
         int peers = 0;
 
         #ifdef _DEBUG
@@ -47,15 +50,31 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpvReserved)
 
         strncpy(buf, GetCommandLine(), sizeof(buf));
 
-        char *struri = strrchr(buf, ' ');
-        if (struri)
+        struri = getenv("CNCNET_URL");
+        if (struri == NULL && (struri = strrchr(buf, ' ')))
         {
             struri++;
-            uri = uri_parse(struri);
+        }
+
+        if (struri && (uri = uri_parse(struri)))
+        {
             printf("CnCNet: URI protocol: %s\n", uri->protocol);
             printf("CnCNet: URI v4: %s\n", uri_value(uri, "v4"));
 
-            if (uri_value(uri, "v4"))
+            if (uri_value(uri, "v4serv"))
+            {
+                const char *ip = uri_value(uri, "v4serv");
+                if (strchr(ip, ':'))
+                {
+                    char *p = strchr(ip, ':');
+                    *p = '\0';
+                    int port = atoi(++p);
+                    printf("CnCNet: v4serv: %s:%d\n", ip, port);
+                    net_peer_add_by_host(ip, port);
+                    dedicated = 1;
+                }
+            }
+            else if (uri_value(uri, "v4"))
             {
                 ret = base32_decode(uri_value(uri, "v4"), buf, sizeof(buf));
                 if (ret > 0)
@@ -72,26 +91,24 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpvReserved)
                         net_peer_add(&peer);
                     }
                 }
-            }
 
-            if (uri_value(uri, "port"))
-            {
-                my_port = atoi(uri_value(uri, "port"));
-                printf("CnCNet: Self port is %d\n", my_port);
-            }
+                if (uri_value(uri, "port"))
+                {
+                    my_port = atoi(uri_value(uri, "port"));
+                    printf("CnCNet: Self port is %d\n", my_port);
+                }
 
-            if (uri_value(uri, "open"))
-            {
-                printf("CnCNet: Enabled open mode, also bcasting to LAN port %d\n", my_port);
-                net_open = 1;
-                net_peer_add_by_host("255.255.255.255", my_port);
+                if (uri_value(uri, "open"))
+                {
+                    printf("CnCNet: Enabled open mode, also bcasting to LAN port %d\n", my_port);
+                    net_open = 1;
+                    net_peer_add_by_host("255.255.255.255", my_port);
+                }
             }
 
             uri_free(uri);
         }
-
-        /* if no peers listed, play a LAN game */
-        if (!peers && net_open == 0)
+        else
         {
             printf("CnCNet: Enabled LAN mode\n");
             net_open = 2;
@@ -155,8 +172,15 @@ int WINAPI fake_recvfrom(SOCKET s, char *buf, int len, int flags, struct sockadd
 
         if (ret > 0)
         {
+            if (dedicated)
+            {
+                id2ipx(net_read_int8(), (struct sockaddr_ipx *)from);
+            }
+            else
+            {
+                in2ipx(&from_in, (struct sockaddr_ipx *)from);
+            }
             ret = net_read_data((void *)buf, len);
-            in2ipx(&from_in, (struct sockaddr_ipx *)from);
         }
 
         return ret;
@@ -175,18 +199,32 @@ int WINAPI fake_sendto(SOCKET s, const char *buf, int len, int flags, const stru
     {
         struct sockaddr_in to_in;
 
+        if (dedicated)
+        {
+            if (is_ipx_broadcast((struct sockaddr_ipx *)to))
+            {
+                net_write_int8(UINT8_MAX);
+            }
+            else
+            {
+                net_write_int8(ipx2id((struct sockaddr_ipx *)to));
+            }
+            net_write_data((void *)buf, len);
+            net_broadcast();
+            return len;
+        }
+
         ipx2in((struct sockaddr_ipx *)to, &to_in);
+        net_write_data((void *)buf, len);
 
         /* check if it's a broadcast */
         if (is_ipx_broadcast((struct sockaddr_ipx *)to))
         {
-            net_write_data((void *)buf, len);
             net_broadcast();
             return len;
         }
         else
         {
-            net_write_data((void *)buf, len);
             return net_send(&to_in);
         }
     }

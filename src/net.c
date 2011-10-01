@@ -50,6 +50,22 @@ void in2ipx(struct sockaddr_in *from, struct sockaddr_ipx *to)
     to->sa_socket = from->sin_port;
 }
 
+uint8_t ipx2id(struct sockaddr_ipx *from)
+{
+    uint8_t peer_id;
+    memcpy(&peer_id, from->sa_nodenum, 1);
+    return peer_id - 1;
+}
+
+void id2ipx(uint8_t peer_id, struct sockaddr_ipx *to)
+{
+    peer_id++;
+    to->sa_family = AF_IPX;
+    *(DWORD *)&to->sa_netnum = 1;
+    memset(to->sa_nodenum, peer_id, sizeof(to->sa_nodenum));
+    memset(&to->sa_socket, peer_id, sizeof(to->sa_socket));
+}
+
 int is_ipx_broadcast(struct sockaddr_ipx *addr)
 {
     unsigned char ff[] = { 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF };
@@ -288,6 +304,11 @@ int net_peer_add(struct sockaddr_in *peer)
     }
 
     return 0;
+}
+
+struct sockaddr_in *net_peer_get(int i)
+{
+    return &net_peers[i];
 }
 
 int net_peer_ok(struct sockaddr_in *peer)
