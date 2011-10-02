@@ -42,6 +42,23 @@
 
 #define NET_BUF_SIZE 1024
 
+enum
+{
+    /* to dedicated from clients and control sources */
+    /* 0x00 - 0xFD = clients */
+    CMD_CONTROL     = 0xFE,
+    CMD_BROADCAST   = 0xFF
+};
+
+enum
+{
+    /* to dedicated from anywhere */
+    CTL_PING        = 0x00,
+    CTL_QUERY       = 0x01,
+    CTL_RESET       = 0x02,
+    CTL_DISCONNECT  = 0x03
+};
+
 int net_reuse(uint16_t sock);
 int net_address(struct sockaddr_in *addr, const char *host, uint16_t port);
 void net_address_ex(struct sockaddr_in *addr, uint32_t ip, uint16_t port);

@@ -203,7 +203,7 @@ int WINAPI fake_sendto(SOCKET s, const char *buf, int len, int flags, const stru
         {
             if (is_ipx_broadcast((struct sockaddr_ipx *)to))
             {
-                net_write_int8(UINT8_MAX);
+                net_write_int8(CMD_BROADCAST);
             }
             else
             {
@@ -275,6 +275,12 @@ int WINAPI fake_closesocket(SOCKET s)
 
     if (s == net_socket)
     {
+        if (dedicated)
+        {
+            net_write_int8(CMD_CONTROL);
+            net_write_int8(CTL_DISCONNECT);
+            net_broadcast();
+        }
         return 0;
     }
 
