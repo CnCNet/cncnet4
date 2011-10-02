@@ -348,8 +348,17 @@ int WINAPI _IPX_Get_Outstanding_Buffer95(void *ptr)
             return 0;
         }
 
-        *from_ip = from.sin_addr.s_addr;
-        *from_port = from.sin_port;
+        if (dedicated)
+        {
+            int8_t peer = net_read_int8();
+            *from_ip = peer;
+            *from_port = peer;
+        }
+        else
+        {
+            *from_ip = from.sin_addr.s_addr;
+            *from_port = from.sin_port;
+        }
 
         if (ret == 0)
         {
@@ -369,6 +378,10 @@ int WINAPI _IPX_Broadcast_Packet95(void *buf, int len)
 #ifdef _DEBUG
     printf("_IPX_Broadcast_Packet95(buf=%p, len=%d)\n", buf, len);
 #endif
+    if (dedicated)
+    {
+        net_write_int8(CMD_BROADCAST);
+    }
     net_write_data(buf, len);
     return (net_broadcast() > 0);
 }
@@ -378,6 +391,14 @@ int WINAPI _IPX_Send_Packet95(void *ptr, void *buf, int len, void *unk1, void *u
 #ifdef _DEBUG
     printf("_IPX_Send_Packet95(ptr=%p, buf=%p, len=%d, unk1=%p, unk2=%p)\n", ptr, buf, len, unk1, unk2);
 #endif
+
+    if (dedicated)
+    {
+        net_write_int8((int8_t)(*(int32_t *)ptr));
+        net_write_data(buf, len);
+        return (net_broadcast() > 0);
+    }
+
     struct sockaddr_in to;
     to.sin_family = AF_INET;
     to.sin_addr.s_addr = *(int32_t *)ptr;
@@ -402,6 +423,12 @@ int WINAPI _IPX_Get_Local_Target95(void *p1, void *p2, void *p3, void *p4)
 int WINAPI _IPX_Close_Socket95(int s)
 {
     printf("_IPX_Close_Socket95(s=%d)\n", s);
+    if (dedicated)
+    {
+        net_write_int8(CMD_CONTROL);
+        net_write_int8(CTL_DISCONNECT);
+        net_broadcast();
+    }
     return 0;
 }
 
