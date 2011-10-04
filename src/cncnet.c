@@ -365,7 +365,7 @@ int WINAPI _IPX_Get_Outstanding_Buffer95(void *ptr)
             return 0;
         }
 
-        *len = htons(net_read_data(buf, 512) + 30);
+        *len = htons(net_read_data(buf, 900) + 30);
 
         return 1;
     }

@@ -40,7 +40,7 @@
 
 #include <unistd.h>
 
-#define NET_BUF_SIZE 1024
+#define NET_BUF_SIZE 2048
 
 enum
 {
