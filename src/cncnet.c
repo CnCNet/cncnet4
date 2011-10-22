@@ -116,7 +116,10 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpvReserved)
             net_peer_add_by_host("255.255.255.255", my_port);
         }
 
-        net_bind("0.0.0.0", my_port);
+        if (!dedicated)
+        {
+            net_bind("0.0.0.0", my_port);
+        }
     }
 
     if (fdwReason == DLL_PROCESS_DETACH)
