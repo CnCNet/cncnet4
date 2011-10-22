@@ -56,7 +56,7 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpvReserved)
             struri++;
         }
 
-        if (struri && (uri = uri_parse(struri)))
+        if (struri && (uri = uri_parse(struri)) && uri->protocol)
         {
             printf("CnCNet: URI protocol: %s\n", uri->protocol);
             printf("CnCNet: URI v4: %s\n", uri_value(uri, "v4"));
