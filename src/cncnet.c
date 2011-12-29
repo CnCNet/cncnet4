@@ -290,6 +290,33 @@ int WINAPI fake_closesocket(SOCKET s)
     return closesocket(s);
 }
 
+int WINAPI fake_getsockname(SOCKET s, struct sockaddr *name, int *namelen)
+{
+    printf("getsockname(s=%d, name=%p, namelen=%p (%d)\n", s, name, namelen, *namelen);
+
+    /* this is a hack for Carmageddon LAN, internet play does not work because this is used */
+    if (s == net_socket)
+    {
+        struct sockaddr_in name_in;
+        char hostname[256];
+        struct hostent *he;
+
+        gethostname(hostname, 256);
+        he = gethostbyname(hostname);
+
+        printf("getsockname: local hostname: %s\n", hostname);
+
+        if (he)
+        {
+            printf("getsockname: local ip: %s\n", inet_ntoa(*(struct in_addr *)(he->h_addr_list[0])));
+            name_in.sin_addr = *(struct in_addr *)(he->h_addr_list[0]);
+            in2ipx(&name_in, (struct sockaddr_ipx *)name);
+        }
+    }
+
+    return getsockname(s, name, namelen);;
+}
+
 int WINAPI _IPX_Initialise()
 {
     printf("_IPX_Initialise()\n");
