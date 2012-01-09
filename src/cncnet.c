@@ -28,6 +28,7 @@
 #include <stdio.h>
 
 int dedicated = 0;
+HMODULE wolapi_dll = NULL;
 
 BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpvReserved)
 {
@@ -45,6 +46,13 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpvReserved)
         #endif
 
         printf("CnCNet: Init\n");
+
+        /* allow CnCNet's wolapi.dll to inject itself */
+        if (GetFileAttributes("wolapi.dll") != INVALID_FILE_ATTRIBUTES)
+        {
+            printf("CnCNet: Loading wolapi.dll for WOL mode\n");
+            wolapi_dll = LoadLibrary("wolapi.dll");
+        }
 
         net_init();
 
@@ -125,6 +133,9 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpvReserved)
     if (fdwReason == DLL_PROCESS_DETACH)
     {
         net_free();
+
+        if (wolapi_dll)
+            FreeLibrary(wolapi_dll);
     }
 
     return TRUE;
