@@ -23,8 +23,6 @@
 
     void ipx2in(struct sockaddr_ipx *from, struct sockaddr_in *to);
     void in2ipx(struct sockaddr_in *from, struct sockaddr_ipx *to);
-    uint8_t ipx2id(struct sockaddr_ipx *from);
-    void id2ipx(uint8_t peer_id, struct sockaddr_ipx *to);
     int is_ipx_broadcast(struct sockaddr_ipx *addr);
 
 #else
@@ -44,19 +42,12 @@
 
 enum
 {
-    /* to dedicated from clients and control sources */
-    /* 0x00 - 0xFD = clients */
-    CMD_CONTROL     = 0xFE,
-    CMD_BROADCAST   = 0xFF
-};
-
-enum
-{
-    /* to dedicated from anywhere */
-    CTL_PING        = 0x00,
-    CTL_QUERY       = 0x01,
-    CTL_RESET       = 0x02,
-    CTL_DISCONNECT  = 0x03
+    CMD_PACKET,
+    CMD_PACKET_P2P,
+    CMD_DISCONNECT,
+    CMD_PING,
+    CMD_QUERY,
+    CMD_PROXY
 };
 
 int net_reuse(uint16_t sock);
@@ -71,26 +62,16 @@ int net_bind(const char *ip, int port);
 int8_t net_read_int8();
 int16_t net_read_int16();
 int32_t net_read_int32();
-int64_t net_read_int64();
 int net_read_data(void *, size_t);
-int net_read_string(char *);
 
 int net_write_int8(int8_t);
 int net_write_int16(int16_t);
 int net_write_int32(int32_t);
-int net_write_int64(int64_t);
 int net_write_data(void *, size_t);
-int net_write_string(char *);
 
 int net_recv(struct sockaddr_in *);
 int net_send(struct sockaddr_in *);
 int net_send_noflush(struct sockaddr_in *dst);
 void net_send_discard();
-void net_peer_add_by_host(const char *host, int16_t port);
-int net_peer_add(struct sockaddr_in *peer);
-struct sockaddr_in *net_peer_get(int i);
-int net_peer_ok(struct sockaddr_in *peer);
-int net_broadcast();
 
 extern int net_socket;
-extern int net_open;

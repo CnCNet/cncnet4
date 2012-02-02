@@ -14,9 +14,9 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
+#define STR_TRUE(s) (s != NULL && (s[0] == '1' || s[0] == 't' || s[0] == 'T' || s[0] == 'y' || s[0] == 'Y' || s[0] == 'e' || s[0] == 'E'))
+
 #include "net.h"
-#include "base32.h"
-#include "uri.h"
 
 #include <windows.h>
 
@@ -27,106 +27,73 @@
 #include <assert.h>
 #include <stdio.h>
 
+int my_p2p = 0;
+
 int dedicated = 0;
 HMODULE wolapi_dll = NULL;
+struct sockaddr_in server;
+
+#define CFG_SECTION "CnCNet4"
+#define CFG_PATH    ".\\cncnet.ini"
 
 BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpvReserved)
 {
     if (fdwReason == DLL_PROCESS_ATTACH)
     {
-        int my_port = 8054, ret;
-        char buf[MAX_PATH];
-        uri_handle *uri = NULL;
-        char *struri;
-        int peers = 0;
+        char cfg_p2p[6] = "false";
+        char cfg_host[256] = "server.cncnet.org";
+        int cfg_port = 9001;
 
         #ifdef _DEBUG
         freopen("stdout.txt", "w", stdout);
         setvbuf(stdout, NULL, _IONBF, 0); 
         #endif
 
-        printf("CnCNet: Init\n");
-
-        /* allow CnCNet's wolapi.dll to inject itself */
-        if (GetFileAttributes("wolapi.dll") != INVALID_FILE_ATTRIBUTES)
-        {
-            printf("CnCNet: Loading wolapi.dll for WOL mode\n");
-            wolapi_dll = LoadLibrary("wolapi.dll");
-        }
+        printf("CnCNet git~%s\n", CNCNET_REV);
 
         net_init();
 
-        strncpy(buf, GetCommandLine(), sizeof(buf));
-
-        struri = getenv("CNCNET_URL");
-        if (struri == NULL && (struri = strrchr(buf, ' ')))
+        if (getenv("CNCNET_ENABLED"))
         {
-            struri++;
-        }
+            printf("Going into online mode...\n");
 
-        if (struri && (uri = uri_parse(struri)) && uri->protocol)
-        {
-            printf("CnCNet: URI protocol: %s\n", uri->protocol);
-            printf("CnCNet: URI v4: %s\n", uri_value(uri, "v4"));
-
-            if (uri_value(uri, "v4serv"))
+            /* allow CnCNet's wolapi.dll to inject itself */
+            if (GetFileAttributes("wolapi.dll") != INVALID_FILE_ATTRIBUTES)
             {
-                const char *ip = uri_value(uri, "v4serv");
-                if (strchr(ip, ':'))
-                {
-                    char *p = strchr(ip, ':');
-                    *p = '\0';
-                    int port = atoi(++p);
-                    printf("CnCNet: v4serv: %s:%d\n", ip, port);
-                    net_peer_add_by_host(ip, port);
-                    dedicated = 1;
-                }
-            }
-            else if (uri_value(uri, "v4"))
-            {
-                ret = base32_decode(uri_value(uri, "v4"), buf, sizeof(buf));
-                if (ret > 0)
-                {
-                    int i;
-                    struct sockaddr_in peer;
-                    peer.sin_family = AF_INET;
-                    peers = ret / 6;
-                    printf("CnCNet: Got %d peers\n", peers);
-                    for (i = 0; i < ret / 6; i ++)
-                    {
-                        memcpy(&peer.sin_addr.s_addr, buf + (i * 6), 4);
-                        memcpy(&peer.sin_port, buf + (i * 6) + 4, 2);
-                        net_peer_add(&peer);
-                    }
-                }
-
-                if (uri_value(uri, "port"))
-                {
-                    my_port = atoi(uri_value(uri, "port"));
-                    printf("CnCNet: Self port is %d\n", my_port);
-                }
-
-                if (uri_value(uri, "open"))
-                {
-                    printf("CnCNet: Enabled open mode, also bcasting to LAN port %d\n", my_port);
-                    net_open = 1;
-                    net_peer_add_by_host("255.255.255.255", my_port);
-                }
+                printf("Loading wolapi.dll for WOL mode\n");
+                wolapi_dll = LoadLibrary("wolapi.dll");
             }
 
-            uri_free(uri);
+            GetPrivateProfileString(CFG_SECTION, "P2P", cfg_p2p, cfg_p2p, sizeof cfg_p2p, CFG_PATH);
+            GetPrivateProfileString(CFG_SECTION, "Host", cfg_host, cfg_host, sizeof cfg_host, CFG_PATH);
+            cfg_port = GetPrivateProfileInt(CFG_SECTION, "Port", cfg_port, CFG_PATH);
+
+            if (STR_TRUE(cfg_p2p))
+            {
+                printf("Peer-to-peer is enabled\n");
+                my_p2p = 1;
+            }
+
+            if (cfg_port < 1024 || cfg_port > 65534)
+            {
+                cfg_port = 9001;
+            }
+
+            printf("Broadcasting to %s:%d\n", cfg_host, cfg_port);
+
+            dedicated = 1;
+            net_address(&server, cfg_host, cfg_port);
+
+            if (my_p2p)
+            {
+                net_bind("0.0.0.0", 8054);
+            }
         }
         else
         {
-            printf("CnCNet: Enabled LAN mode\n");
-            net_open = 2;
-            my_port = 5000;
-            net_peer_add_by_host("255.255.255.255", my_port);
-        }
-
-        if (!dedicated)
-        {
-            net_bind("0.0.0.0", my_port);
+            printf("CnCNet: Going into LAN mode...\n");
+            net_address(&server, "255.255.255.255", 5000);
+            net_bind("0.0.0.0", 5000);
         }
     }
 
@@ -143,7 +110,9 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpvReserved)
 
 SOCKET WINAPI fake_socket(int af, int type, int protocol)
 {
+#ifdef _DEBUG
     printf("socket(af=%08X, type=%08X, protocol=%08X)\n", af, type, protocol);
+#endif
 
     if (af == AF_IPX)
     {
@@ -155,7 +124,9 @@ SOCKET WINAPI fake_socket(int af, int type, int protocol)
 
 int WINAPI fake_bind(SOCKET s, const struct sockaddr *name, int namelen)
 {
+#ifdef _DEBUG
     printf("bind(s=%d, name=%p, namelen=%d)\n", s, name, namelen);
+#endif
 
     if (s == net_socket)
     {
@@ -178,17 +149,33 @@ int WINAPI fake_recvfrom(SOCKET s, char *buf, int len, int flags, struct sockadd
 
         ret = net_recv(&from_in);
 
-        /* check if allowed peer */
-        if (!net_peer_ok(&from_in))
-        {
-            return 0;
-        }
-
         if (ret > 0)
         {
             if (dedicated)
             {
-                id2ipx(net_read_int8(), (struct sockaddr_ipx *)from);
+                if (from_in.sin_addr.s_addr == server.sin_addr.s_addr && from_in.sin_port == server.sin_port)
+                {
+                    from_in.sin_zero[0] = net_read_int8(); /* p2p flag */
+                    from_in.sin_addr.s_addr = net_read_int32();
+                    from_in.sin_port = net_read_int16();
+                }
+                else if (my_p2p)
+                {
+                    from_in.sin_zero[0] = 1; /* p2p flag for direct packets */
+                }
+                else
+                {
+                    /* discard p2p packets if not in p2p mode */
+                    return 0;
+                }
+
+                /* force p2p port */
+                if (from_in.sin_zero[0])
+                {
+                    from_in.sin_port = htons(8054);
+                }
+
+                in2ipx(&from_in, (struct sockaddr_ipx *)from);
             }
             else
             {
@@ -217,14 +204,29 @@ int WINAPI fake_sendto(SOCKET s, const char *buf, int len, int flags, const stru
         {
             if (is_ipx_broadcast((struct sockaddr_ipx *)to))
             {
-                net_write_int8(CMD_BROADCAST);
+                net_write_int8(my_p2p ? 1 : 0);
+                net_write_int32(0xFFFFFFFF);
+                net_write_int16(0xFFFF);
+                net_write_data((void *)buf, len);
+                net_send(&server);
             }
             else
             {
-                net_write_int8(ipx2id((struct sockaddr_ipx *)to));
+                ipx2in((struct sockaddr_ipx *)to, &to_in);
+
+                /* use p2p only if both clients are in p2p mode */
+                if (to_in.sin_zero[0] && my_p2p) {
+                    net_write_data((void *)buf, len);
+                    net_send(&to_in);
+                } else {
+                    net_write_int8(my_p2p ? 1 : 0);
+                    net_write_int32(to_in.sin_addr.s_addr);
+                    net_write_int16(to_in.sin_port);
+                    net_write_data((void *)buf, len);
+                    net_send(&server);
+                }
             }
-            net_write_data((void *)buf, len);
-            net_broadcast();
+
             return len;
         }
 
@@ -234,7 +236,7 @@ int WINAPI fake_sendto(SOCKET s, const char *buf, int len, int flags, const stru
         /* check if it's a broadcast */
         if (is_ipx_broadcast((struct sockaddr_ipx *)to))
         {
-            net_broadcast();
+            net_send(&server);
             return len;
         }
         else
@@ -248,7 +250,9 @@ int WINAPI fake_sendto(SOCKET s, const char *buf, int len, int flags, const stru
 
 int WINAPI fake_getsockopt(SOCKET s, int level, int optname, char *optval, int *optlen)
 {
+#ifdef _DEBUG
     printf("getsockopt(s=%d, level=%08X, optname=%08X, optval=%p, optlen=%p (%d))\n", s, level, optname, optval, optlen, *optlen);
+#endif
 
     if (level == 0x3E8)
     {
@@ -269,7 +273,9 @@ int WINAPI fake_getsockopt(SOCKET s, int level, int optname, char *optval, int *
 
 int WINAPI fake_setsockopt(SOCKET s, int level, int optname, const char *optval, int optlen)
 {
+#ifdef _DEBUG
     printf("setsockopt(s=%d, level=%08X, optname=%08X, optval=%p, optlen=%d)\n", s, level, optname, optval, optlen);
+#endif
 
     if (level == 0x3E8)
     {
@@ -285,16 +291,12 @@ int WINAPI fake_setsockopt(SOCKET s, int level, int optname, const char *optval,
 
 int WINAPI fake_closesocket(SOCKET s)
 {
+#ifdef _DEBUG
     printf("closesocket(s=%d)\n", s);
+#endif
 
     if (s == net_socket)
     {
-        if (dedicated)
-        {
-            net_write_int8(CMD_CONTROL);
-            net_write_int8(CTL_DISCONNECT);
-            net_broadcast();
-        }
         return 0;
     }
 
@@ -303,7 +305,9 @@ int WINAPI fake_closesocket(SOCKET s)
 
 int WINAPI fake_getsockname(SOCKET s, struct sockaddr *name, int *namelen)
 {
+#ifdef _DEBUG
     printf("getsockname(s=%d, name=%p, namelen=%p (%d)\n", s, name, namelen, *namelen);
+#endif
 
     /* this is a hack for Carmageddon LAN, internet play does not work because this is used */
     if (s == net_socket)
@@ -330,19 +334,25 @@ int WINAPI fake_getsockname(SOCKET s, struct sockaddr *name, int *namelen)
 
 int WINAPI _IPX_Initialise()
 {
+#ifdef _DEBUG
     printf("_IPX_Initialise()\n");
+#endif
     return 1;
 }
 
 int WINAPI _IPX_Open_Socket95(int s)
 {
+#ifdef _DEBUG
     printf("_IPX_Open_Socket95(s=%d)\n", s);
+#endif
     return 0;
 }
 
 int WINAPI _IPX_Start_Listening95()
 {
+#ifdef _DEBUG
     printf("_IPX_Start_Listening95()\n");
+#endif
     return 1;
 }
 
@@ -357,11 +367,10 @@ int WINAPI _IPX_Get_Outstanding_Buffer95(void *ptr)
 
     /* using some old magic */
     int16_t *len = ptr + 2;
-    int *from_ip = ptr + 22;
-    int16_t *from_port = ptr + 26;
+    char *from = ptr + 22;
     char *buf = ptr + 30;
 
-    struct sockaddr_in from;
+    struct sockaddr_ipx ipx_from;
     struct timeval tv;
     int ret;
 
@@ -381,34 +390,16 @@ int WINAPI _IPX_Get_Outstanding_Buffer95(void *ptr)
 
     if(FD_ISSET(net_socket, &read_fds))
     {
-        ret = net_recv(&from);
+        size_t ipx_len = sizeof (struct sockaddr_ipx);
+        ret = fake_recvfrom(net_socket, buf, 900, 0, (struct sockaddr *)&ipx_from, &ipx_len);
 
-        /* check if allowed peer */
-        if (!net_peer_ok(&from))
+        if (ret > 0)
         {
-            return 0;
+            *len = htons(ret + 30);
+            memcpy(from, ipx_from.sa_nodenum, 6);
+            *(from + 6) = ipx_from.sa_netnum[1];
+            return 1;
         }
-
-        if (dedicated)
-        {
-            int8_t peer = net_read_int8();
-            *from_ip = peer;
-            *from_port = peer;
-        }
-        else
-        {
-            *from_ip = from.sin_addr.s_addr;
-            *from_port = from.sin_port;
-        }
-
-        if (ret == 0)
-        {
-            return 0;
-        }
-
-        *len = htons(net_read_data(buf, 900) + 30);
-
-        return 1;
     }
 
     return 0;
@@ -419,12 +410,9 @@ int WINAPI _IPX_Broadcast_Packet95(void *buf, int len)
 #ifdef _DEBUG
     printf("_IPX_Broadcast_Packet95(buf=%p, len=%d)\n", buf, len);
 #endif
-    if (dedicated)
-    {
-        net_write_int8(CMD_BROADCAST);
-    }
-    net_write_data(buf, len);
-    return (net_broadcast() > 0);
+    struct sockaddr_ipx to;
+    memset(&to, 0xFF, sizeof (struct sockaddr_ipx));
+    return fake_sendto(net_socket, buf, len, 0, (struct sockaddr *)&to, sizeof (struct sockaddr_ipx));
 }
 
 int WINAPI _IPX_Send_Packet95(void *ptr, void *buf, int len, void *unk1, void *unk2)
@@ -432,49 +420,43 @@ int WINAPI _IPX_Send_Packet95(void *ptr, void *buf, int len, void *unk1, void *u
 #ifdef _DEBUG
     printf("_IPX_Send_Packet95(ptr=%p, buf=%p, len=%d, unk1=%p, unk2=%p)\n", ptr, buf, len, unk1, unk2);
 #endif
+    struct sockaddr_ipx to;
+    memcpy(&to.sa_nodenum, ptr, 6);
+    to.sa_netnum[1] = *((char *)ptr + 6);
 
-    if (dedicated)
-    {
-        net_write_int8((int8_t)(*(int32_t *)ptr));
-        net_write_data(buf, len);
-        return (net_broadcast() > 0);
-    }
-
-    struct sockaddr_in to;
-    to.sin_family = AF_INET;
-    to.sin_addr.s_addr = *(int32_t *)ptr;
-    to.sin_port = *(int16_t *)(ptr + 4);
-
-    net_write_data(buf, len);
-    return (net_send(&to) > 0);
+    return fake_sendto(net_socket, buf, len, 0, (struct sockaddr *)ptr, sizeof (struct sockaddr_ipx));
 }
 
 int WINAPI _IPX_Get_Connection_Number95()
 {
+#ifdef _DEBUG
     printf("_IPX_Get_Connection_Number95()\n");
+#endif
     return 0;
 }
 
 int WINAPI _IPX_Get_Local_Target95(void *p1, void *p2, void *p3, void *p4)
 {
+#ifdef _DEBUG
     printf("_IPX_Get_Local_Target95(p1=%p, p2=%p, p3=%p, p4=%p)\n", p1, p2, p3, p4);
+#endif
     return 1;
 }
 
 int WINAPI _IPX_Close_Socket95(int s)
 {
+#ifdef _DEBUG
     printf("_IPX_Close_Socket95(s=%d)\n", s);
-    if (dedicated)
-    {
-        net_write_int8(CMD_CONTROL);
-        net_write_int8(CTL_DISCONNECT);
-        net_broadcast();
-    }
+#endif
+
+    fake_closesocket(net_socket);
     return 0;
 }
 
 int WINAPI _IPX_Shut_Down95()
 {
+#ifdef _DEBUG
     printf("_IPX_Shut_Down95()\n");
+#endif
     return 1;
 }
