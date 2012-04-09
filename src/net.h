@@ -42,12 +42,11 @@
 
 enum
 {
-    CMD_PACKET,
-    CMD_PACKET_P2P,
+    CMD_TUNNEL,
+    CMD_P2P,
     CMD_DISCONNECT,
     CMD_PING,
-    CMD_QUERY,
-    CMD_PROXY
+    CMD_QUERY
 };
 
 int net_reuse(uint16_t sock);

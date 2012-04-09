@@ -129,7 +129,8 @@ int net_bind(const char *ip, int port)
 int8_t net_read_int8()
 {
     int8_t tmp;
-    assert(net_ipos + 1 <= net_ilen);
+    if (net_ipos + 1 > net_ilen)
+        return 0;
     memcpy(&tmp, net_ibuf + net_ipos, 1);
     net_ipos += 1;
     return tmp;
@@ -138,7 +139,8 @@ int8_t net_read_int8()
 int16_t net_read_int16()
 {
     int16_t tmp;
-    assert(net_ipos + 2 <= net_ilen);
+    if (net_ipos + 2 > net_ilen)
+        return 0;
     memcpy(&tmp, net_ibuf + net_ipos, 2);
     net_ipos += 2;
     return tmp;
@@ -147,7 +149,8 @@ int16_t net_read_int16()
 int32_t net_read_int32()
 {
     int32_t tmp;
-    assert(net_ipos + 4 <= net_ilen);
+    if (net_ipos + 4 > net_ilen)
+        return 0;
     memcpy(&tmp, net_ibuf + net_ipos, 4);
     net_ipos += 4;
     return tmp;

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2011 Toni Spets <toni.spets@iki.fi>
+ * Copyright (c) 2010, 2011, 2012 Toni Spets <toni.spets@iki.fi>
  *
  * Permission to use, copy, modify, and distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -36,12 +36,17 @@ struct sockaddr_in server;
 #define CFG_SECTION "CnCNet4"
 #define CFG_PATH    ".\\cncnet.ini"
 
+const char *getenv_default(const char *key, const char *def)
+{
+    return getenv(key) ? getenv(key) : def;
+}
+
 BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpvReserved)
 {
     if (fdwReason == DLL_PROCESS_ATTACH)
     {
-        char cfg_p2p[6] = "false";
-        char cfg_host[256] = "server.cncnet.org";
+        const char *cfg_p2p;
+        const char *cfg_host;
         int cfg_port = 9001;
 
         #ifdef _DEBUG
@@ -53,7 +58,7 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpvReserved)
 
         net_init();
 
-        if (getenv("CNCNET_ENABLED"))
+        if (getenv("CNCNET_HOST"))
         {
             printf("Going into online mode...\n");
 
@@ -64,9 +69,9 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpvReserved)
                 wolapi_dll = LoadLibrary("wolapi.dll");
             }
 
-            GetPrivateProfileString(CFG_SECTION, "P2P", cfg_p2p, cfg_p2p, sizeof cfg_p2p, CFG_PATH);
-            GetPrivateProfileString(CFG_SECTION, "Host", cfg_host, cfg_host, sizeof cfg_host, CFG_PATH);
-            cfg_port = GetPrivateProfileInt(CFG_SECTION, "Port", cfg_port, CFG_PATH);
+            cfg_host = getenv_default("CNCNET_HOST", "server.cncnet.org");
+            cfg_port = atoi(getenv_default("CNCNET_PORT", "9001"));
+            cfg_p2p = getenv_default("CNCNET_P2P", "false");
 
             if (STR_TRUE(cfg_p2p))
             {
@@ -155,7 +160,19 @@ int WINAPI fake_recvfrom(SOCKET s, char *buf, int len, int flags, struct sockadd
             {
                 if (from_in.sin_addr.s_addr == server.sin_addr.s_addr && from_in.sin_port == server.sin_port)
                 {
-                    from_in.sin_zero[0] = net_read_int8(); /* p2p flag */
+                    uint8_t cmd = net_read_int8();
+
+                    /* handle keepalive packets from server, very special case */
+                    if (cmd == CMD_PING)
+                    {
+                        net_write_int8(CMD_PING);
+                        net_write_int32(net_read_int32());
+                        net_send(&from_in);
+                        /* FIXME: returning 0 means disconnected */
+                        return 0;
+                    }
+
+                    from_in.sin_zero[0] = cmd; /* p2p flag */
                     from_in.sin_addr.s_addr = net_read_int32();
                     from_in.sin_port = net_read_int16();
                 }
@@ -166,6 +183,7 @@ int WINAPI fake_recvfrom(SOCKET s, char *buf, int len, int flags, struct sockadd
                 else
                 {
                     /* discard p2p packets if not in p2p mode */
+                    /* FIXME: returning 0 means disconnected */
                     return 0;
                 }
 
@@ -297,6 +315,8 @@ int WINAPI fake_closesocket(SOCKET s)
 
     if (s == net_socket)
     {
+        net_write_int8(CMD_DISCONNECT);
+        net_send(&server);
         return 0;
     }
 
@@ -369,6 +389,7 @@ int WINAPI _IPX_Get_Outstanding_Buffer95(void *ptr)
     int16_t *len = ptr + 2;
     char *from = ptr + 22;
     char *buf = ptr + 30;
+    char *p2p = ptr + 18;
 
     struct sockaddr_ipx ipx_from;
     struct timeval tv;
@@ -397,7 +418,7 @@ int WINAPI _IPX_Get_Outstanding_Buffer95(void *ptr)
         {
             *len = htons(ret + 30);
             memcpy(from, ipx_from.sa_nodenum, 6);
-            *(from + 6) = ipx_from.sa_netnum[1];
+            *p2p = ipx_from.sa_netnum[1];
             return 1;
         }
     }
@@ -411,20 +432,22 @@ int WINAPI _IPX_Broadcast_Packet95(void *buf, int len)
     printf("_IPX_Broadcast_Packet95(buf=%p, len=%d)\n", buf, len);
 #endif
     struct sockaddr_ipx to;
-    memset(&to, 0xFF, sizeof (struct sockaddr_ipx));
+    memset(&to, 0xFF, sizeof to);
+    to.sa_family = AF_IPX;
     return fake_sendto(net_socket, buf, len, 0, (struct sockaddr *)&to, sizeof (struct sockaddr_ipx));
 }
 
-int WINAPI _IPX_Send_Packet95(void *ptr, void *buf, int len, void *unk1, void *unk2)
+int WINAPI _IPX_Send_Packet95(void *ptr, void *buf, int len, char *unk1, void *unk2)
 {
 #ifdef _DEBUG
     printf("_IPX_Send_Packet95(ptr=%p, buf=%p, len=%d, unk1=%p, unk2=%p)\n", ptr, buf, len, unk1, unk2);
 #endif
     struct sockaddr_ipx to;
+    memset(&to, 0, sizeof to);
+    to.sa_family = AF_IPX;
     memcpy(&to.sa_nodenum, ptr, 6);
-    to.sa_netnum[1] = *((char *)ptr + 6);
-
-    return fake_sendto(net_socket, buf, len, 0, (struct sockaddr *)ptr, sizeof (struct sockaddr_ipx));
+    to.sa_netnum[1] = unk1[0];
+    return fake_sendto(net_socket, buf, len, 0, (struct sockaddr *)&to, sizeof (struct sockaddr_ipx));
 }
 
 int WINAPI _IPX_Get_Connection_Number95()
