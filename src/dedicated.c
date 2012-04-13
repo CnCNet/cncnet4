@@ -52,16 +52,6 @@ const char *game_str(int game)
     }
 }
 
-enum
-{
-    CMD_TUNNEL,     /* 0 */
-    CMD_P2P,        /* 1 */
-    CMD_DISCONNECT, /* 2 */
-    CMD_PING,       /* 3 */
-    CMD_QUERY,      /* 4 */
-    CMD_TESTP2P     /* 5 */
-};
-
 typedef struct Client
 {
     struct sockaddr_in  addr;

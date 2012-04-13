@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011 Toni Spets <toni.spets@iki.fi>
+ * Copyright (c) 2011, 2012 Toni Spets <toni.spets@iki.fi>
  *
  * Permission to use, copy, modify, and distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -19,6 +19,10 @@
     #include <winsock2.h>
     #include <wsipx.h>
     typedef int socklen_t;
+
+    void ipx2in(struct sockaddr_ipx *from, struct sockaddr_in *to);
+    void in2ipx(struct sockaddr_in *from, struct sockaddr_ipx *to);
+    int is_ipx_broadcast(struct sockaddr_ipx *addr);
 #else
     #include <sys/types.h>
     #include <sys/socket.h>
@@ -31,6 +35,16 @@
 #include <unistd.h>
 
 #define NET_BUF_SIZE 2048
+
+enum
+{
+    CMD_TUNNEL,     /* 0 */
+    CMD_P2P,        /* 1 */
+    CMD_DISCONNECT, /* 2 */
+    CMD_PING,       /* 3 */
+    CMD_QUERY,      /* 4 */
+    CMD_TESTP2P     /* 5 */
+};
 
 int net_reuse(uint16_t sock);
 int net_address(struct sockaddr_in *addr, const char *host, uint16_t port);
@@ -59,16 +73,5 @@ int net_recv(struct sockaddr_in *);
 int net_send(struct sockaddr_in *);
 int net_send_noflush(struct sockaddr_in *dst);
 void net_send_discard();
-void net_broadcast(int from);
-
-void net_peer_remove(uint8_t index);
-void net_peer_remove_by_addr(struct sockaddr_in *peer);
-uint8_t net_peer_count();
-void net_peer_reset();
-uint8_t net_peer_get_by_addr(struct sockaddr_in *peer);
-uint8_t net_peer_add(struct sockaddr_in *peer);
-struct sockaddr_in *net_peer_get(uint8_t index);
-intptr_t *net_peer_data(uint8_t index);
 
 extern int net_socket;
-extern int net_open;

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011 Toni Spets <toni.spets@iki.fi>
+ * Copyright (c) 2011, 2012 Toni Spets <toni.spets@iki.fi>
  *
  * Permission to use, copy, modify, and distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -15,9 +15,11 @@
  */
 
 #include "net.h"
+#include "log.h"
 #include <stdio.h>
 #include <assert.h>
 #include <errno.h>
+#include <stdlib.h>
 
 #include <string.h>
 
@@ -77,11 +79,11 @@ int net_address(struct sockaddr_in *addr, const char *host, uint16_t port)
     hent = gethostbyname(host);
     if(!hent)
     {
-        return FALSE;
+        return 0;
     }
 
     net_address_ex(addr, *(int *)hent->h_addr_list[0], port);
-    return TRUE;
+    return 1;
 }
 
 void net_address_ex(struct sockaddr_in *addr, uint32_t ip, uint16_t port)
@@ -126,6 +128,11 @@ int net_bind(const char *ip, int port)
     return bind(net_socket, (struct sockaddr *)&net_local, sizeof(net_local));
 }
 
+uint32_t net_read_size()
+{
+    return net_ilen - net_ipos;
+}
+
 int8_t net_read_int8()
 {
     int8_t tmp;
@@ -168,6 +175,24 @@ int net_read_data(void *ptr, size_t len)
     return len;
 }
 
+int net_read_string(char *str, size_t len)
+{
+    int i;
+    for (i = net_ipos; i < NET_BUF_SIZE; i++)
+        if (net_ibuf[i] == '\0')
+            break;
+
+    if (len > i - net_ipos)
+    {
+        len = i - net_ipos;
+    }
+
+    memcpy(str, net_ibuf + net_ipos, len);
+    str[len] = '\0';
+    net_ipos += len + 1;
+    return 0;
+}
+
 int net_write_int8(int8_t d)
 {
     assert(net_opos + 1 <= NET_BUF_SIZE);
@@ -202,9 +227,24 @@ int net_write_data(void *ptr, size_t len)
     return 1;
 }
 
+int net_write_string(char *str)
+{
+    assert(net_opos + strlen(str) + 1 <= NET_BUF_SIZE);
+    memcpy(net_obuf + net_opos, str, strlen(str) + 1);
+    net_opos += strlen(str) + 1;
+    return 1;
+}
+
+int net_write_string_int32(int32_t d)
+{
+    char str[32];
+    snprintf(str, sizeof(str), "%d", d);
+    return net_write_string(str);
+}
+
 int net_recv(struct sockaddr_in *src)
 {
-    size_t l = sizeof(struct sockaddr_in);
+    socklen_t l = sizeof(struct sockaddr_in);
     net_ipos = 0;
     net_ilen = recvfrom(net_socket, net_ibuf, NET_BUF_SIZE, 0, (struct sockaddr *)src, &l);
     return net_ilen;
