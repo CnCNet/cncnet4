@@ -2,7 +2,7 @@ CC=gcc
 REV=$(shell sh -c 'git rev-parse --short @{0}')
 DEDICATED_CFLAGS=-O2 -g $(CFLAGS) -DVERSION=\"git~$(REV)\"
 DLL_CFLAGS=-O0 -s -Wall -g0 -DCNCNET_REV=\"$(REV)\"
-CLIENT_CFLAGS=-pedantic -Wall -Os -s -Wall -I. -Ires -DCNCNET_VERSION=\"$(REV)\"
+CLIENT_CFLAGS=-pedantic -Wall -Os -s -Wall -I. -Ires -DCNCNET_VERSION=\"$(REV)\" -DRELEASE
 
 all: cncnet-dedicated cncnet.dll cncnet.exe
 
