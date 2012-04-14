@@ -59,17 +59,17 @@ int is_ipx_broadcast(struct sockaddr_ipx *addr)
 }
 #endif
 
-int net_opt_reuse(uint16_t sock)
+int net_opt_reuse()
 {
     int yes = 1;
-    setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, (char *) &yes, sizeof(yes));
+    setsockopt(net_socket, SOL_SOCKET, SO_REUSEADDR, (char *) &yes, sizeof(yes));
     return yes;
 }
 
-int net_opt_broadcast(uint16_t sock)
+int net_opt_broadcast()
 {
     int yes = 1;
-    setsockopt(sock, SOL_SOCKET, SO_BROADCAST, (char *) &yes, sizeof(yes));
+    setsockopt(net_socket, SOL_SOCKET, SO_BROADCAST, (char *) &yes, sizeof(yes));
     return yes;
 }
 
@@ -98,17 +98,17 @@ void net_address_ex(struct sockaddr_in *addr, uint32_t ip, uint16_t port)
 int net_init()
 {
 #ifdef WIN32
-    if (!net_socket)
-    {
-        WSADATA wsaData;
-        WSAStartup(0x0101, &wsaData);
-    }
+    WSADATA wsaData;
 #endif
 
     if (net_socket)
     {
-        close(net_socket);
+        net_free();
     }
+
+#ifdef WIN32
+    WSAStartup(0x0101, &wsaData);
+#endif
 
     net_socket = socket(AF_INET, SOCK_DGRAM, 0);
     net_ipos = 0;
@@ -118,11 +118,13 @@ int net_init()
 
 void net_free()
 {
-    close(net_socket);
-
 #ifdef WIN32
+    closesocket(net_socket);
     WSACleanup();
+#else
+    close(net_socket);
 #endif
+    net_socket = 0;
 }
 
 int net_bind(const char *ip, int port)
@@ -133,7 +135,6 @@ int net_bind(const char *ip, int port)
     }
 
     net_address(&net_local, ip, port);
-    net_opt_reuse(net_socket);
 
     return bind(net_socket, (struct sockaddr *)&net_local, sizeof(net_local));
 }

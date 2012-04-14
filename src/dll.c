@@ -57,6 +57,7 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpvReserved)
         printf("CnCNet git~%s\n", CNCNET_REV);
 
         s = net_init();
+        net_opt_reuse();
 
         if (getenv("CNCNET_HOST"))
         {

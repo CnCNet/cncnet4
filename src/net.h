@@ -46,7 +46,9 @@ enum
     CMD_TESTP2P     /* 5 */
 };
 
-int net_opt_broadcast(uint16_t sock);
+int net_opt_reuse();
+int net_opt_broadcast();
+
 int net_address(struct sockaddr_in *addr, const char *host, uint16_t port);
 void net_address_ex(struct sockaddr_in *addr, uint32_t ip, uint16_t port);
 
