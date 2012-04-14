@@ -63,6 +63,8 @@ static DWORD test_do(HWND hwnd)
         }
     }
 
+    close(s);
+
     PostMessage(hwnd, WM_USER + 2, ret, 0);
     return 0;
 }
