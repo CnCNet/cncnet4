@@ -37,12 +37,22 @@ static DWORD connect_check(HWND hwnd)
     struct sockaddr_in from;
     int start = time(NULL);
     int alive = 0;
+    int p2p = config_get_bool("P2P");
 
     net_address(&to, config_get("Host"), config_get_int("Port"));
+    net_bind("0.0.0.0", 8054);
 
-    net_write_int8(CMD_QUERY);
+    if (p2p)
+    {
+        net_write_int8(CMD_TESTP2P);
+        net_write_int32(start);
+    }
+    else
+    {
+        net_write_int8(CMD_QUERY);
+    }
 
-    while (time(NULL) < start + 3)
+    while (time(NULL) < start + 5)
     {
         net_send_noflush(&to);
 
@@ -57,10 +67,21 @@ static DWORD connect_check(HWND hwnd)
             {
                 net_recv(&from);
 
-                if (net_read_int8() == CMD_QUERY)
+                if (p2p)
                 {
-                    alive = 1;
-                    break;
+                    if (net_read_int8() == CMD_TESTP2P && net_read_int32() == start)
+                    {
+                        alive = 1;
+                        break;
+                    }
+                }
+                else
+                {
+                    if (net_read_int8() == CMD_QUERY)
+                    {
+                        alive = 1;
+                        break;
+                    }
                 }
             }
         }
@@ -70,7 +91,14 @@ static DWORD connect_check(HWND hwnd)
 
     if (!alive)
     {
-        MessageBox(NULL, "The CnCNet server seems to be down, please try again later.", "CnCNet - Oh snap!", MB_OK|MB_ICONERROR);
+        if (p2p)
+        {
+            MessageBox(NULL, "The CnCNet server seems to be down. You are in peer-to-peer mode, is your UDP port 8054 open?\n\nIf this problem persists, try to disable peer-to-peer connection.", "CnCNet - Oh snap!", MB_OK|MB_ICONERROR);
+        }
+        else
+        {
+            MessageBox(NULL, "The CnCNet server seems to be down, please try again later.", "CnCNet - Oh snap!", MB_OK|MB_ICONERROR);
+        }
         PostMessage(hwnd, WM_USER+2, IDD_SETTINGS, 0);
         return 0;
     }

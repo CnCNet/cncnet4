@@ -33,11 +33,11 @@ static DWORD test_do(HWND hwnd)
     int start = time(NULL);
     int ret = 0;
 
-    net_address(&to, "server.cncnet.org", 9001);
+    net_address(&to, config_get("Host"), config_get_int("Port"));
     net_bind("0.0.0.0", 8054);
 
     net_write_int8(CMD_TESTP2P);
-    net_write_int32(1234567);
+    net_write_int32(start);
 
     while (time(NULL) < start + 5)
     {
@@ -54,7 +54,7 @@ static DWORD test_do(HWND hwnd)
             {
                 net_recv(&from);
 
-                if (net_read_int8() == CMD_TESTP2P && net_read_int32() == 1234567)
+                if (net_read_int8() == CMD_TESTP2P && net_read_int32() == start)
                 {
                     ret = 1;
                     break;
