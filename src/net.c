@@ -98,9 +98,18 @@ void net_address_ex(struct sockaddr_in *addr, uint32_t ip, uint16_t port)
 int net_init()
 {
 #ifdef WIN32
-    WSADATA wsaData;
-    WSAStartup(0x0101, &wsaData);
+    if (!net_socket)
+    {
+        WSADATA wsaData;
+        WSAStartup(0x0101, &wsaData);
+    }
 #endif
+
+    if (net_socket)
+    {
+        close(net_socket);
+    }
+
     net_socket = socket(AF_INET, SOCK_DGRAM, 0);
     net_ipos = 0;
     net_opos = 0;
