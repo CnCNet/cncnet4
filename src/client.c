@@ -120,8 +120,6 @@ int CALLBACK WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
     /* make a good guess which game we are going to run */
     if (strlen(config_get("Executable")) == 0)
     {
-        config_set("Dll", "wsock32.dll");
-
         if (FileExists("C&C95.EXE"))
         {
             config_set("Executable", "C&C95.EXE");

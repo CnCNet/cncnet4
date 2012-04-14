@@ -40,7 +40,7 @@ void config_init()
     config_set_default("Port", "9001");
     config_set_default("P2P", "");
     config_set_default("Executable", "");
-    config_set_default("Dll", "");
+    config_set_default("Dll", "wsock32.dll");
     config_set_default("Timeout", "3");
     config_set_default("ExtractDll", "true");
     config_set_default("AutoUpdate", "true");
