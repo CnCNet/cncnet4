@@ -77,6 +77,7 @@ int CALLBACK WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
     /* remove temporary files */
     if (FileExists("cncnet.tmp"))
     {
+        Sleep(1000);
         SetFileAttributes("cncnet.tmp", FILE_ATTRIBUTE_NORMAL);
         DeleteFile("cncnet.tmp");
         if (FileExists("cncnet.tmp"))
@@ -93,6 +94,18 @@ int CALLBACK WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
         {
             Sleep(1000);
             DeleteFile("cncnet.ex_");
+        }
+        /* removing might fail on the first run if a race condition is met, just ignore this */
+    }
+
+    if (FileExists("cncnet.dl_"))
+    {
+        SetFileAttributes("cncnet.dl_", FILE_ATTRIBUTE_NORMAL);
+        DeleteFile("cncnet.dl_");
+        if (FileExists("cncnet.dl_"))
+        {
+            Sleep(1000);
+            DeleteFile("cncnet.dl_");
         }
         /* removing might fail on the first run if a race condition is met, just ignore this */
     }
@@ -123,7 +136,6 @@ int CALLBACK WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
         if (FileExists("C&C95.EXE"))
         {
             config_set("Executable", "C&C95.EXE");
-            config_set("Dll", "thipx32.dll");
             config_set_default("Arguments", "-LAN");
         }
         else if (FileExists("RA95.DAT"))
@@ -157,6 +169,12 @@ int CALLBACK WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
         {
             next_dialog = IDD_SETTINGS;
         }
+    }
+
+    /* force thipx32.dll for C&C */
+    if (strcmp(config_get("Executable"), "C&C95.EXE") == 0)
+    {
+        config_set("Dll", "thipx32.dll");
     }
 
     /* extract cncnet.dll */
