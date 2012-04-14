@@ -29,6 +29,7 @@ typedef struct Config
 {
     char key[32];
     char value[128];
+    int ini;
     struct Config *next;
 } Config;
 
@@ -89,7 +90,10 @@ const char *config_get(const char *key)
 {
     Config *cfg = config_list_find(key);
 
-    GetPrivateProfileString(CONFIG_SECTION, cfg->key, cfg->value, cfg->value, sizeof cfg->value, CONFIG_PATH);
+    if (!cfg->ini)
+    {
+        GetPrivateProfileString(CONFIG_SECTION, cfg->key, cfg->value, cfg->value, sizeof cfg->value, CONFIG_PATH);
+    }
 
     return cfg->value;
 }
@@ -108,12 +112,15 @@ void config_set(const char *key, const char *value)
 {
     Config *cfg = config_list_find(key);
     strncpy(cfg->value, value, sizeof cfg->value);
+    cfg->ini = 1;
 }
 
 void config_set_default(const char *key, const char *value)
 {
-    if (strlen(config_get(key)) == 0)
+    Config *cfg = config_list_find(key);
+
+    if (cfg->ini == 0)
     {
-        config_set(key, value);
+        strncpy(cfg->value, value, sizeof cfg->value);
     }
 }

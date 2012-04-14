@@ -131,54 +131,46 @@ int CALLBACK WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
     }
 
     /* make a good guess which game we are going to run */
+    if (FileExists("C&C95.EXE"))
+    {
+        config_set_default("Executable", "C&C95.EXE");
+        config_set_default("Dll", "thipx32.dll");
+        config_set_default("Arguments", "-LAN");
+    }
+    else if (FileExists("RA95.DAT"))
+    {
+        config_set_default("Executable", "RA95.DAT");
+    }
+    else if (FileExists("RA95.EXE"))
+    {
+        config_set_default("Executable", "RA95.EXE");
+        config_set_default("Arguments", "-LAN");
+    }
+    else if (FileExists("DTA.DAT"))
+    {
+        config_set_default("Executable", "DTA.DAT");
+        config_set_default("Arguments", "-LAN");
+    }
+    else if (FileExists("SUN.EXE"))
+    {
+        config_set_default("Executable", "SUN.EXE");
+        config_set_default("Arguments", "-LAN");
+    }
+    else if (FileExists("RA2MD.EXE"))
+    {
+        config_set_default("Executable", "RA2MD.EXE");
+    }
+    else if (FileExists("RA2.EXE"))
+    {
+        config_set_default("Executable", "RA2.EXE");
+    }
+
+    /* force settings dialog if no executable found */
     if (strlen(config_get("Executable")) == 0)
     {
-        if (FileExists("C&C95.EXE"))
-        {
-            config_set("Executable", "C&C95.EXE");
-            config_set_default("Arguments", "-LAN");
-        }
-        else if (FileExists("RA95.DAT"))
-        {
-            config_set("Executable", "RA95.DAT");
-        }
-        else if (FileExists("RA95.EXE"))
-        {
-            config_set("Executable", "RA95.EXE");
-            config_set_default("Arguments", "-LAN");
-        }
-        else if (FileExists("DTA.DAT"))
-        {
-            config_set("Executable", "DTA.DAT");
-        }
-        else if (FileExists("SUN.EXE"))
-        {
-            config_set("Executable", "SUN.EXE");
-        }
-        else if (FileExists("RA2MD.EXE"))
-        {
-            config_set("Executable", "RA2MD.EXE");
-        }
-        else if (FileExists("RA2.EXE"))
-        {
-            config_set("Executable", "RA2.EXE");
-        }
-
-        /* force settings dialog if no executable found */
-        if (strlen(config_get("Executable")) == 0)
-        {
-            next_dialog = IDD_SETTINGS;
-        }
+        next_dialog = IDD_SETTINGS;
     }
-
-    /* force thipx32.dll for C&C */
-    if (strcmp(config_get("Executable"), "C&C95.EXE") == 0)
-    {
-        config_set("Dll", "thipx32.dll");
-    }
-
-    /* extract cncnet.dll */
-    if (config_get_bool("ExtractDll") && strlen(config_get("Executable")))
+    else if (config_get_bool("ExtractDll"))
     {
         HRSRC hResInfo;
         const char *dll = config_get("Dll");
