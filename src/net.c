@@ -102,6 +102,8 @@ int net_init()
     WSAStartup(0x0101, &wsaData);
 #endif
     net_socket = socket(AF_INET, SOCK_DGRAM, 0);
+    net_ipos = 0;
+    net_opos = 0;
     return net_socket;
 }
 
@@ -246,7 +248,7 @@ int net_recv(struct sockaddr_in *src)
 {
     socklen_t l = sizeof(struct sockaddr_in);
     net_ipos = 0;
-    net_ilen = recvfrom(net_socket, net_ibuf, NET_BUF_SIZE, 0, (struct sockaddr *)src, &l);
+    net_ilen = recvfrom(net_socket, (char *)net_ibuf, NET_BUF_SIZE, 0, (struct sockaddr *)src, &l);
     return net_ilen;
 }
 
@@ -259,7 +261,7 @@ int net_send(struct sockaddr_in *dst)
 
 int net_send_noflush(struct sockaddr_in *dst)
 {
-    int ret = sendto(net_socket, net_obuf, net_opos, 0, (struct sockaddr *)dst, sizeof(struct sockaddr_in));
+    int ret = sendto(net_socket, (char *)net_obuf, net_opos, 0, (struct sockaddr *)dst, sizeof(struct sockaddr_in));
     return ret;
 }
 

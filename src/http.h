@@ -14,13 +14,28 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
-#define DLG_STATUS      1001
-#define DLG_SETTINGS    1002
+#ifndef _HTTP_H_
+#define _HTTP_H_
 
-#define ITM_STATUS      2001
-#define ITM_SETTINGS    2002
-#define ITM_URL         2003
-#define ITM_EXE         2004
-#define ITM_PORT        2005
-#define ITM_OK          2006
-#define ITM_CANCEL      2007
+#include <windows.h>
+#include <stdbool.h>
+#include <stdio.h>
+#include <wininet.h>
+
+typedef struct
+{
+    void *buf;
+    size_t bufpos;
+    size_t bufsiz;
+} download;
+
+typedef bool (*HTTP_CALLBACK)(void *buf, size_t len, size_t file_pos, size_t file_size, void *context);
+
+bool http_init();
+bool http_release();
+bool http_get(const char *url, HTTP_CALLBACK cb, void *context);
+bool http_write_mem(void *buf, size_t size, size_t file_pos, size_t file_size, download *dl);
+int http_download_mem(const char *url, void *buf, size_t bufsiz);
+int http_download_file(const char *url, const char *path);
+
+#endif

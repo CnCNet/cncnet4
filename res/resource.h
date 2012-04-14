@@ -3,8 +3,12 @@
 #endif
 
 #define IDD_SETTINGS                            101
-#define IDD_CONNECTING                          103
-#define IDC_SETTINGS                            1001
+#define IDD_WAIT                                106
+#define IDD_CONNECT                             107
+#define IDD_UPDATE                              109
+#define IDD_DOWNLOAD                            111
+#define IDD_TEST                                113
+#define IDC_PROGRESS                            1001
 #define IDC_EXECUTABLE                          1013
 #define IDC_ARGUMENTS                           1014
 #define IDC_HOST                                1020

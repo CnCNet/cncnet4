@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011 Toni Spets <toni.spets@iki.fi>
+ * Copyright (c) 2011, 2012 Toni Spets <toni.spets@iki.fi>
  *
  * Permission to use, copy, modify, and distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -14,27 +14,12 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
-#ifndef _HTTP_H_
-#define _HTTP_H_
+void config_init();
+void config_save();
+void config_free();
 
-#include <windows.h>
-#include <stdbool.h>
-#include <stdio.h>
-#include <wininet.h>
-
-typedef struct
-{
-    void *buf;
-    size_t bufpos;
-    size_t bufsiz;
-} download;
-
-typedef bool (*HTTP_CALLBACK)(void *buf, size_t len, size_t file_pos, size_t file_size, void *context);
-
-bool http_init();
-bool http_release();
-bool http_write_mem(void *buf, size_t size, size_t file_pos, size_t file_size, download *dl);
-int http_download_mem(const char *url, void *buf, size_t bufsiz);
-int http_download_file(const char *url, const char *path);
-
-#endif
+const char *config_get(const char *key);
+int config_get_int(const char *key);
+int config_get_bool(const char *key);
+void config_set(const char *key, const char *value);
+void config_set_default(const char *key, const char *value);
