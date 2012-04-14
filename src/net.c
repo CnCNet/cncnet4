@@ -134,7 +134,6 @@ int net_bind(const char *ip, int port)
 
     net_address(&net_local, ip, port);
     net_opt_reuse(net_socket);
-    net_opt_broadcast(net_socket);
 
     return bind(net_socket, (struct sockaddr *)&net_local, sizeof(net_local));
 }

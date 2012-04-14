@@ -47,7 +47,7 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpvReserved)
     {
         const char *cfg_p2p;
         const char *cfg_host;
-        int cfg_port = 9001;
+        int s, cfg_port = 9001;
 
         #ifdef _DEBUG
         freopen("stdout.txt", "w", stdout);
@@ -56,7 +56,7 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpvReserved)
 
         printf("CnCNet git~%s\n", CNCNET_REV);
 
-        net_init();
+        s = net_init();
 
         if (getenv("CNCNET_HOST"))
         {
@@ -98,6 +98,7 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpvReserved)
         {
             printf("CnCNet: Going into LAN mode...\n");
             net_address(&server, "255.255.255.255", 5000);
+            net_opt_broadcast(s);
             net_bind("0.0.0.0", 5000);
         }
     }
