@@ -109,6 +109,10 @@ INT_PTR CALLBACK settings_DialogProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM
                 case IDCANCEL:
                     EndDialog(hwnd, 0);
                     return TRUE;
+
+                case IDC_RETEST:
+                    EndDialog(hwnd, IDD_TEST);
+                    return TRUE;
             }
             break;
     }

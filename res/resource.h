@@ -8,6 +8,7 @@
 #define IDD_UPDATE                              109
 #define IDD_DOWNLOAD                            111
 #define IDD_TEST                                113
+#define IDC_RETEST                              1000
 #define IDC_PROGRESS                            1001
 #define IDC_EXECUTABLE                          1013
 #define IDC_ARGUMENTS                           1014
