@@ -94,7 +94,7 @@ INT_PTR CALLBACK test_DialogProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lPa
             else
             {
                 config_set("P2P", "true");
-                MessageBox(NULL, "CnCNet has successfully detected that you have faster peer-to-peer connection working!", "CnCNet", MB_OK|MB_ICONINFORMATION);
+                MessageBox(NULL, "CnCNet has detected that you have faster peer-to-peer connection working.\n\nHowever, the detection is not perfect. If you have problems in-game, try disabling peer-to-peer in CnCNet settings.", "CnCNet", MB_OK|MB_ICONINFORMATION);
             }
 
             return TRUE;
