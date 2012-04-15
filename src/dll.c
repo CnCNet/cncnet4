@@ -99,7 +99,7 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpvReserved)
         {
             printf("CnCNet: Going into LAN mode...\n");
             net_address(&server, "255.255.255.255", 5000);
-            net_opt_broadcast(s);
+            net_opt_broadcast();
             net_bind("0.0.0.0", 5000);
         }
     }
@@ -317,8 +317,11 @@ int WINAPI fake_closesocket(SOCKET s)
 
     if (s == net_socket)
     {
-        net_write_int8(CMD_DISCONNECT);
-        net_send(&server);
+        if (dedicated)
+        {
+            net_write_int8(CMD_DISCONNECT);
+            net_send(&server);
+        }
         return 0;
     }
 
