@@ -449,11 +449,7 @@ int main(int argc, char **argv)
                         }
                     }
 
-                    if (client_to == NULL)
-                    {
-                        log_printf("%s:%d tried to send to unknown client %s:%d\n", inet_ntoa(peer.sin_addr), ntohs(peer.sin_port), inet_ntoa(*(struct in_addr *)&to_ip), ntohs(to_port));
-                    }
-                    else
+                    if (client_to != NULL)
                     {
                         net_write_int8(cmd);
                         net_write_int32(peer.sin_addr.s_addr);
