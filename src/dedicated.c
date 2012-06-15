@@ -36,6 +36,7 @@ enum
     GAME_TSTI,
     GAME_RA2,
     GAME_RA2MO,
+    GAME_RA2CNCR,
     GAME_LAST
 };
 
@@ -50,6 +51,7 @@ const char *game_str(int game)
         case GAME_TSTI:     return "TSTI";
         case GAME_RA2:      return "RA2";
         case GAME_RA2MO:    return "RA2MO";
+        case GAME_RA2CNCR:  return "RA2CNCR";
         default:            return "UNKNOWN";
     }
 }
@@ -274,6 +276,8 @@ int main(int argc, char **argv)
                     net_write_string_int32(cnt[GAME_RA2]);
                     net_write_string("ra2mo");
                     net_write_string_int32(cnt[GAME_RA2MO]);
+                    net_write_string("ra2cncr");
+                    net_write_string_int32(cnt[GAME_RA2CNCR]);
 
                     net_send(&peer);
                     total_packets++;
@@ -386,6 +390,10 @@ int main(int argc, char **argv)
                     else if (buf[4] == 0x36 && buf[5] == 0x13)
                     {
                         client->game = GAME_RA2MO;
+                    }
+                    else if (buf[4] == 0x36 && buf[5] == 0x14)
+                    {
+                        client->game = GAME_RA2CNCR;
                     }
                     else
                     {
