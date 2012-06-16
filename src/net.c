@@ -36,17 +36,19 @@ void ipx2in(struct sockaddr_ipx *from, struct sockaddr_in *to)
 {
     to->sin_family = AF_INET;
     memcpy(&to->sin_addr.s_addr, from->sa_nodenum, 4);
-    memcpy(&to->sin_port, from->sa_nodenum + 4, 2);
-    to->sin_zero[0] = from->sa_netnum[1];
+    to->sin_port = from->sa_socket;
+    // cncnet p2p flag
+    to->sin_zero[0] = from->sa_nodenum[1];
 }
 
 void in2ipx(struct sockaddr_in *from, struct sockaddr_ipx *to)
 {
     to->sa_family = AF_IPX;
-    *(DWORD *)&to->sa_netnum = 1;
-    to->sa_netnum[1] = from->sin_zero[0];
+    *(DWORD *)&to->sa_netnum = 0xDEADBEEF;
     memcpy(to->sa_nodenum, &from->sin_addr.s_addr, 4);
-    memcpy(to->sa_nodenum + 4, &from->sin_port, 2);
+    to->sa_socket = from->sin_port;
+    // cncnet p2p flag
+    to->sa_nodenum[4] = from->sin_zero[0];
 }
 
 int is_ipx_broadcast(struct sockaddr_ipx *addr)
