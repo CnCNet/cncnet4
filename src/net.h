@@ -34,7 +34,7 @@
 #include <stdint.h>
 #include <unistd.h>
 
-#define NET_BUF_SIZE 2048
+#define NET_BUF_SIZE 10240
 
 enum
 {
