@@ -251,6 +251,7 @@ int WINAPI fake_sendto(SOCKET s, const char *buf, int len, int flags, const stru
         }
 
         ipx2in((struct sockaddr_ipx *)to, &to_in);
+        to_in.sin_port = htons(5000); // forcing the destination port
         net_write_data((void *)buf, len);
 
         /* check if it's a broadcast */
