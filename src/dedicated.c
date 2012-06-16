@@ -395,10 +395,6 @@ int main(int argc, char **argv)
                     {
                         client->game = GAME_RA2CNCR;
                     }
-                    else
-                    {
-                        client->game = GAME_UNKNOWN;
-                    }
 
                     client->p2p = (cmd == CMD_P2P);
 
