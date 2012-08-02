@@ -16,7 +16,6 @@
 
 #include <windows.h>
 #include <stdio.h>
-#include "xz/xz.h"
 #include "config.h"
 #include "resource.h"
 
@@ -31,6 +30,8 @@ INT_PTR CALLBACK download_DialogProc(HWND, UINT, WPARAM, LPARAM);
 INT_PTR CALLBACK wait_DialogProc(HWND, UINT, WPARAM, LPARAM);
 INT_PTR CALLBACK connect_DialogProc(HWND, UINT, WPARAM, LPARAM);
 INT_PTR CALLBACK settings_DialogProc(HWND, UINT, WPARAM, LPARAM);
+
+int cncnet_extract(const char *data, int len, const char *filename);
 
 dlg_map dialogs[] =
 {
@@ -165,6 +166,35 @@ int CALLBACK WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
         config_set_default("Executable", "RA2.EXE");
     }
 
+    if ((FileExists("RA95.DAT") || FileExists("RA95.EXE")))
+    {
+        HRSRC hResInfo = FindResource(NULL, "rarules", RT_RCDATA);
+
+        if (hResInfo)
+        {
+            DWORD src_len = SizeofResource(NULL, hResInfo);
+            HGLOBAL hResData = LoadResource(NULL, hResInfo);
+            LPVOID src = LockResource(hResData);
+
+            if (config_get_int("PatchRA") == 0)
+            {
+                if (MessageBox(NULL, "CnCNet requires a small update for Red Alert to "
+                                 "prevent connectivity issues. Without this "
+                                 "update, you will have problems connecting to "
+                                 "other players.\n\nApply patch?", "CnCNet",
+                                 MB_YESNO|MB_ICONQUESTION) != IDYES) {
+                    return 0;
+                }
+
+                config_set_default("PatchRA", "1");
+                config_save();
+            }
+
+            if (!cncnet_extract(src, src_len, "rules.ini"))
+                return 1;
+        }
+    }
+
     /* force settings dialog if no executable found */
     if (strlen(config_get("Executable")) == 0)
     {
@@ -194,46 +224,9 @@ int CALLBACK WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
             DWORD src_len = SizeofResource(NULL, hResInfo);
             HGLOBAL hResData = LoadResource(NULL, hResInfo);
             LPVOID src = LockResource(hResData);
-            unsigned char buf[BUFSIZ];
-            FILE *fh;
-            struct xz_buf dec_buf;
-            struct xz_dec *dec = xz_dec_init(XZ_DYNALLOC, 1 << 26);
 
-            xz_crc32_init();
-
-            dec_buf.in = src;
-            dec_buf.in_pos = 0;
-            dec_buf.in_size = src_len;
-            dec_buf.out = buf;
-            dec_buf.out_pos = 0;
-            dec_buf.out_size = sizeof(buf);
-
-            fh = fopen(dll, "wb");
-            if (!fh)
-            {
-                snprintf(path, sizeof(path), "Couldn't replace %s. Check your permissions!", dll);
-                MessageBox(NULL, path, "CnCNet", MB_OK|MB_ICONERROR);
+            if (!cncnet_extract(src, src_len, dll))
                 return 1;
-            }
-
-            while (dec_buf.in_pos < src_len)
-            {
-                int dec_ret = xz_dec_run(dec, &dec_buf);
-
-                fwrite(dec_buf.out, dec_buf.out_pos, 1, fh);
-                dec_buf.out_pos = 0;
-
-                if (dec_ret == XZ_DATA_ERROR)
-                {
-                    MessageBox(NULL, "XZ archive is corrupted! Aborting.", "CnCNet", MB_OK|MB_ICONERROR);
-                    return 1;
-                }
-
-                if (dec_ret != XZ_OK)
-                    break;
-            }
-
-            fclose(fh);
         }
         else
         {

@@ -45,6 +45,7 @@ void config_init()
     config_set_default("Timeout", "3");
     config_set_default("ExtractDll", "true");
     config_set_default("AutoUpdate", "true");
+    config_set_default("PatchRA", "0");
 }
 
 void config_save()

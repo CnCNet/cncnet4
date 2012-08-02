@@ -415,7 +415,7 @@ int WINAPI _IPX_Get_Outstanding_Buffer95(void *ptr)
     if(FD_ISSET(net_socket, &read_fds))
     {
         size_t ipx_len = sizeof (struct sockaddr_ipx);
-        ret = fake_recvfrom(net_socket, buf, 900, 0, (struct sockaddr *)&ipx_from, &ipx_len);
+        ret = fake_recvfrom(net_socket, buf, 900, 0, (struct sockaddr *)&ipx_from, (int *)&ipx_len);
 
         if (ret > 0)
         {

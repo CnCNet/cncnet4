@@ -12,6 +12,7 @@
 
 LANGUAGE LANG_NEUTRAL, SUBLANG_NEUTRAL
 dll                RCDATA         "cncnet.dll.xz"
+rarules            RCDATA         "rules.ini.xz"
 
 
 
