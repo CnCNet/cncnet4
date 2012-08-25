@@ -190,8 +190,9 @@ int CALLBACK WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
                 config_save();
             }
 
-            if (!cncnet_extract(src, src_len, "rules.ini"))
-                return 1;
+            if (config_get_int("PatchRA") == 1)
+                if (!cncnet_extract(src, src_len, "rules.ini"))
+                    return 1;
         }
     }
 
