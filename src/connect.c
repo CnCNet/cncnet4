@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012 Toni Spets <toni.spets@iki.fi>
+ * Copyright (c) 2011 Toni Spets <toni.spets@iki.fi>
  *
  * Permission to use, copy, modify, and distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -17,155 +17,203 @@
 #include <windows.h>
 #include <stdio.h>
 #include <commctrl.h>
-#include <time.h>
-#include "config.h"
+
 #include "resource.h"
-#include "net.h"
+#include "http.h"
 
 #define FileExists(a) (GetFileAttributes(a) != INVALID_FILE_ATTRIBUTES)
 
-static DWORD connect_check(HWND hwnd)
+char mem_get_int8(char **buf, int *pos, int size)
 {
-    STARTUPINFO sInfo;
-    PROCESS_INFORMATION pInfo;
-    int s = net_init();
-    char buf[MAX_PATH];
-
-    fd_set rfds;
-    struct timeval tv;
-    struct sockaddr_in to;
-    struct sockaddr_in from;
-    int start = time(NULL);
-    int alive = 0;
-    int p2p = config_get_bool("P2P");
-
-    net_address(&to, config_get("Host"), config_get_int("Port"));
-    net_bind("0.0.0.0", 8054);
-
-    if (p2p)
+    if (*pos < size)
     {
-        net_write_int8(CMD_TESTP2P);
-        net_write_int32(start);
-    }
-    else
-    {
-        net_write_int8(CMD_QUERY);
+        char ret = **buf;
+        *pos += 1;
+        *buf += 1;
+        return ret;
     }
 
-    while (time(NULL) < start + 5)
+    return 0;
+}
+
+int mem_get_int32(char **buf, int *pos, int size)
+{
+    if (*pos + 4 <= size)
     {
-        net_send_noflush(&to);
+        int ret = *((int *)*buf);
+        *pos += 4;
+        *buf += 4;
+        return ret;
+    }
 
-        FD_ZERO(&rfds);
-        FD_SET(s, &rfds);
-        tv.tv_sec = 1;
-        tv.tv_usec = 0;
+    return 0;
+}
 
-        if (select(s + 1, &rfds, NULL, NULL, &tv) > -1)
+int mem_get_data(char **buf, char *dst, int len, int *pos, int size)
+{
+    int ret = min(len, size - *pos);
+
+    memcpy(dst, *buf, ret);
+
+    *buf += ret;
+    *pos += ret;
+
+    return ret;
+}
+
+extern char *arg_exe;
+extern char *arg_url;
+
+static DWORD launch_spawn(HWND hwnd)
+{
+    size_t size = 1024 * 1024;
+    char *buf = malloc(size);
+    char strbuf[256];
+
+    char gameid[64] = { 0 };
+    char name[32] = { 0 };
+
+    char *p = strstr(arg_url, "//");
+    if (p && strlen(p) > 2)
+    {
+        p += 2;
+
+        char *p2 = strstr(p, "/");
+        if (p2)
         {
-            if (FD_ISSET(s, &rfds))
-            {
-                net_recv(&from);
-
-                if (p2p)
-                {
-                    if (net_read_int8() == CMD_TESTP2P && net_read_int32() == start)
-                    {
-                        alive = 1;
-                        break;
-                    }
-                }
-                else
-                {
-                    if (net_read_int8() == CMD_QUERY)
-                    {
-                        alive = 1;
-                        break;
-                    }
-                }
-            }
+            *p2 = '\0';
+            strncpy(gameid, p, sizeof gameid);
+            p2++;
+            strncpy(name, p2, sizeof name);
         }
     }
 
-    net_free();
+    gameid[sizeof gameid - 1] = '\0';
+    name[sizeof name - 1] = '\0';
 
-    if (!alive)
+    if (strlen(gameid) == 0 || strlen(name) == 0)
     {
-        if (p2p)
-        {
-            MessageBox(NULL, "The CnCNet server seems to be down. You are in peer-to-peer mode, is your UDP port 8054 open?\n\nIf this problem persists, try to disable peer-to-peer connection.", "CnCNet - Oh snap!", MB_OK|MB_ICONERROR);
-        }
-        else
-        {
-            MessageBox(NULL, "The CnCNet server seems to be down, please try again later.", "CnCNet - Oh snap!", MB_OK|MB_ICONERROR);
-        }
-        PostMessage(hwnd, WM_USER+2, IDD_SETTINGS, 0);
+        MessageBox(NULL, "Malformed URL.", "CnCNet", MB_OK|MB_ICONERROR);
+        PostMessage(hwnd, WM_USER+2, 0, 0);
         return 0;
     }
 
-    /* remove temporary files */
-    if (FileExists("cncnet.tmp"))
+    http_init();
+
+    snprintf(strbuf, sizeof strbuf, "http://5.cncnet.org/spawn/%s/%s", gameid, name);
+    printf("Fetching spawn data from %s\r\n", strbuf);
+
+    if (http_download_mem(strbuf, buf, &size))
     {
-        SetFileAttributes("cncnet.tmp", FILE_ATTRIBUTE_NORMAL);
-        DeleteFile("cncnet.tmp");
-        if (FileExists("cncnet.tmp"))
+        STARTUPINFO sInfo;
+        PROCESS_INFORMATION pInfo;
+        int pos = 0;
+
+        while (pos < size)
         {
-            MessageBox(NULL, "Couldn't remove old temporary file cncnet.tmp. Check your permissions!", "CnCNet", MB_OK|MB_ICONERROR);
-        }
-    }
+            int len,rd;
+            char *filebuf, type = mem_get_int8(&buf, &pos, size);
 
-    if (FileExists("cncnet.ex_"))
-    {
-        SetFileAttributes("cncnet.ex_", FILE_ATTRIBUTE_NORMAL);
-        DeleteFile("cncnet.ex_");
-        if (FileExists("cncnet.ex_"))
+            if (type == 1)
+            {
+                len = mem_get_int32(&buf, &pos, size);
+                filebuf = malloc(len);
+                rd = mem_get_data(&buf, filebuf, len, &pos, size);
+
+                if (rd == len)
+                {
+                    FILE *fh = fopen("spawn.ini", "wb");
+                    if (fh)
+                    {
+                        fwrite(filebuf, len, 1, fh);
+                        fclose(fh);
+                    }
+                }
+
+                free(filebuf);
+
+                printf("Read spawn ini %d/%d\n", rd, len);
+            }
+            else if (type == 2)
+            {
+                len = mem_get_int32(&buf, &pos, size);
+                filebuf = malloc(len);
+                rd = mem_get_data(&buf, filebuf, len, &pos, size);
+
+                if (rd == len)
+                {
+                    FILE *fh = fopen("maptmp.ini", "wb");
+                    if (fh)
+                    {
+                        fwrite(filebuf, len, 1, fh);
+                        fclose(fh);
+                    }
+                }
+
+                free(filebuf);
+
+                printf("Read map ini %d/%d\n", rd, len);
+            }
+            else if (type == 3)
+            {
+                len = mem_get_int32(&buf, &pos, size);
+                filebuf = malloc(len);
+                rd = mem_get_data(&buf, filebuf, len, &pos, size);
+
+                if (rd == len)
+                {
+                    FILE *fh = fopen("maptmp.bin", "wb");
+                    if (fh)
+                    {
+                        fwrite(filebuf, len, 1, fh);
+                        fclose(fh);
+                    }
+                }
+
+                free(filebuf);
+
+                printf("Read map bin %d/%d\n", rd, len);
+            }
+            else
+            {
+                printf("Invalid type %d\n", type);
+                break;
+            }
+        }
+
+        snprintf(strbuf, sizeof strbuf, "%s -SPAWN", arg_exe);
+
+        ZeroMemory(&sInfo, sizeof sInfo);
+        sInfo.cb = sizeof sInfo;
+        ZeroMemory(&pInfo, sizeof pInfo);
+
+        if (CreateProcess(NULL, strbuf, NULL, NULL, TRUE, 0, NULL, NULL, &sInfo, &pInfo) != 0)
         {
-            Sleep(1000);
-            DeleteFile("cncnet.ex_");
+            ShowWindow(hwnd, SW_HIDE);
+            WaitForSingleObject(pInfo.hProcess, INFINITE);
+            PostMessage(hwnd, WM_USER+2, 0, 0);
         }
-        /* removing might fail on the first run if a race condition is met, just ignore this */
-    }
-
-    if (FileExists("thipx32.dl_"))
-    {
-        SetFileAttributes("thipx32.dl_", FILE_ATTRIBUTE_NORMAL);
-        DeleteFile("thipx32.dl_");
-        if (FileExists("thipx32.dl_"))
+        else
         {
-            MessageBox(NULL, "Couldn't remove old temporary file thipx32.dl_. Please remove it yourself.", "CnCNet", MB_OK|MB_ICONERROR);
+            snprintf(strbuf, sizeof strbuf, "Failed to launch %s", arg_exe);
+            MessageBox(NULL, strbuf, "CnCNet", MB_OK|MB_ICONERROR);
         }
+
+    } else {
+        snprintf(strbuf, sizeof strbuf, "Connection to CnCNet failed, game was not found.");
+        MessageBox(NULL, strbuf, "CnCNet", MB_OK|MB_ICONERROR);
     }
 
-    if (FileExists("wsock32.dl_"))
-    {
-        SetFileAttributes("wsock32.dl_", FILE_ATTRIBUTE_NORMAL);
-        DeleteFile("wsock32.dl_");
-        if (FileExists("wsock32.dl_"))
-        {
-            MessageBox(NULL, "Couldn't remove old temporary file wsock32.dl_. Please remove it yourself.", "CnCNet", MB_OK|MB_ICONERROR);
-        }
-    }
+    free(buf);
 
-    ZeroMemory(&sInfo, sizeof sInfo);
-    sInfo.cb = sizeof sInfo;
-    ZeroMemory(&pInfo, sizeof pInfo);
+    /* cleanup */
+    DeleteFile("spawn.ini");
+    DeleteFile("maptmp.ini");
+    DeleteFile("maptmp.bin");
 
-    /* settings passed to dll */
-    SetEnvironmentVariable("CNCNET_HOST", config_get("Host"));
-    SetEnvironmentVariable("CNCNET_PORT", config_get("Port"));
-    SetEnvironmentVariable("CNCNET_P2P", config_get("P2P"));
+    http_release();
 
-    snprintf(buf, sizeof buf, "%s %s", config_get("Executable"), config_get("Arguments"));
-    if (CreateProcess(NULL, buf, NULL, NULL, TRUE, 0, NULL, NULL, &sInfo, &pInfo) != 0)
-    {
-        PostMessage(hwnd, WM_USER+2, 0, 0);
-    }
-    else
-    {
-        snprintf(buf, sizeof buf, "Failed to launch %s", config_get("Executable"));
-        MessageBox(NULL, buf, "CnCNet", MB_OK|MB_ICONERROR);
-        PostMessage(hwnd, WM_USER+2, IDD_SETTINGS, 0);
-    }
+    PostMessage(hwnd, WM_USER+2, 0, 0);
 
     return 0;
 }
@@ -179,10 +227,11 @@ INT_PTR CALLBACK connect_DialogProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM 
             SendMessage(hwnd, WM_SETICON, (WPARAM)ICON_SMALL, (LPARAM)LoadIcon(GetModuleHandle(NULL), "small"));
             SendMessage(hwnd, WM_SETICON, (WPARAM)ICON_BIG, (LPARAM)LoadIcon(GetModuleHandle(NULL), "large"));
 
-            CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)connect_check, hwnd, 0, NULL);
+            CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)launch_spawn, hwnd, 0, NULL);
 
             return TRUE;
 
+        case WM_CLOSE:
         case WM_USER+2:
             EndDialog(hwnd, wParam);
             break;

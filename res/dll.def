@@ -2,12 +2,12 @@ LIBRARY     cncnet.dll
 
 EXPORTS
     accept                  = "system32\\wsock32".accept                   @1
-    bind                    = fake_bind                                    @2
-    closesocket             = fake_closesocket                             @3
+    bind                    = ipx_bind                                     @2
+    closesocket             = "system32\\wsock32".closesocket              @3
     connect                 = "system32\\wsock32".connect                  @4
     getpeername             = "system32\\wsock32".getpeername              @5
-    getsockname             = fake_getsockname                             @6
-    getsockopt              = fake_getsockopt                              @7
+    getsockname             = ipx_getsockname                              @6
+    getsockopt              = ipx_getsockopt                               @7
     htonl                   = "system32\\wsock32".htonl                    @8
     htons                   = "system32\\wsock32".htons                    @9
     inet_addr               = "system32\\wsock32".inet_addr                @10
@@ -17,13 +17,13 @@ EXPORTS
     ntohl                   = "system32\\wsock32".ntohl                    @14
     ntohs                   = "system32\\wsock32".ntohs                    @15
     recv                    = "system32\\wsock32".recv                     @16
-    recvfrom                = fake_recvfrom                                @17
+    recvfrom                = ipx_recvfrom                                 @17
     select                  = "system32\\wsock32".select                   @18
     send                    = "system32\\wsock32".send                     @19
-    sendto                  = fake_sendto                                  @20
-    setsockopt              = fake_setsockopt                              @21
+    sendto                  = ipx_sendto                                   @20
+    setsockopt              = ipx_setsockopt                               @21
     shutdown                = "system32\\wsock32".shutdown                 @22
-    socket                  = fake_socket                                  @23
+    socket                  = ipx_socket                                   @23
     gethostbyaddr           = "system32\\wsock32".gethostbyaddr            @51
     gethostbyname           = "system32\\wsock32".gethostbyname            @52
     getprotobyname          = "system32\\wsock32".getprotobyname           @53

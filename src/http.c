@@ -93,13 +93,18 @@ bool http_write_mem(void *buf, size_t size, size_t file_pos, size_t file_size, d
     return true;
 }
 
-int http_download_mem(const char *url, void *buf, size_t bufsiz)
+int http_download_mem(const char *url, void *buf, size_t *bufsiz)
 {
+    int ret;
     static download dl;
     dl.buf = buf;
     dl.bufpos = 0;
-    dl.bufsiz = bufsiz;
-    return http_get(url, (HTTP_CALLBACK)http_write_mem, &dl);
+    dl.bufsiz = *bufsiz;
+
+    ret = http_get(url, (HTTP_CALLBACK)http_write_mem, &dl);
+    *bufsiz = dl.bufpos;
+
+    return ret;
 }
 
 bool http_write_file(void *buf, size_t size, size_t file_pos, size_t file_size, FILE *fh)

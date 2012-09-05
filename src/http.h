@@ -35,7 +35,7 @@ bool http_init();
 bool http_release();
 bool http_get(const char *url, HTTP_CALLBACK cb, void *context);
 bool http_write_mem(void *buf, size_t size, size_t file_pos, size_t file_size, download *dl);
-int http_download_mem(const char *url, void *buf, size_t bufsiz);
+int http_download_mem(const char *url, void *buf, size_t *bufsiz);
 int http_download_file(const char *url, const char *path);
 
 #endif
