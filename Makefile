@@ -15,4 +15,4 @@ cncnet.exe: res/cncnet.rc.in src/client.c src/connect.c src/http.c
 	echo $(REV) > version.txt
 
 clean:
-	rm -f cncnet.exe res/*.o
+	rm -f cncnet.dll cncnet.exe res/*.o

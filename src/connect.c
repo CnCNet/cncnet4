@@ -100,7 +100,7 @@ static DWORD launch_spawn(HWND hwnd)
 
     http_init();
 
-    snprintf(strbuf, sizeof strbuf, "http://5.cncnet.org/spawn/%s/%s", gameid, name);
+    snprintf(strbuf, sizeof strbuf, "http://5.cncnet.org/gapi.php?method=getGame&gameid=%s&name=%s", gameid, name);
     printf("Fetching spawn data from %s\r\n", strbuf);
 
     if (http_download_mem(strbuf, buf, &size))
