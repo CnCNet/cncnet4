@@ -146,6 +146,16 @@ static DWORD connect_check(HWND hwnd)
         }
     }
 
+    /* CnCNet 5 nag */
+    if (stricmp(config_get("Executable"), "C&C95.exe") == 0 || stricmp(config_get("Executable"), "cnc95.exe") == 0 || stricmp(config_get("Executable"), "ra95.exe") == 0 || stricmp(config_get("Executable"), "ra95.dat") == 0) {
+        int ret = MessageBox(NULL, "It appears you are playing a game that is supported on CnCNet 5. The new version of CnCNet has many new features that make playing even more fun than before.\n\nWould you like to update to CnCNet 5?", "CnCNet 5 has been released!", MB_YESNO|MB_ICONINFORMATION);
+        if (ret == IDYES) {
+            ShellExecute(NULL, "open", "http://cncnet.org/5", NULL, NULL, SW_SHOWNORMAL);
+            PostMessage(hwnd, WM_USER+2, 0, 0);
+            return 0;
+        }
+    }
+
     ZeroMemory(&sInfo, sizeof sInfo);
     sInfo.cb = sizeof sInfo;
     ZeroMemory(&pInfo, sizeof pInfo);
