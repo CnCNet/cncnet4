@@ -1,64 +1,64 @@
 LIBRARY     cncnet.dll
 
 EXPORTS
-    accept                  = "system32\\wsock32".accept                   @1
-    bind                    = fake_bind                                    @2
-    closesocket             = fake_closesocket                             @3
-    connect                 = "system32\\wsock32".connect                  @4
-    getpeername             = "system32\\wsock32".getpeername              @5
-    getsockname             = fake_getsockname                             @6
-    getsockopt              = fake_getsockopt                              @7
-    htonl                   = "system32\\wsock32".htonl                    @8
-    htons                   = "system32\\wsock32".htons                    @9
-    inet_addr               = "system32\\wsock32".inet_addr                @10
-    inet_ntoa               = "system32\\wsock32".inet_ntoa                @11
-    ioctlsocket             = "system32\\wsock32".ioctlsocket              @12
-    listen                  = "system32\\wsock32".listen                   @13
-    ntohl                   = "system32\\wsock32".ntohl                    @14
-    ntohs                   = "system32\\wsock32".ntohs                    @15
-    recv                    = "system32\\wsock32".recv                     @16
-    recvfrom                = fake_recvfrom                                @17
-    select                  = "system32\\wsock32".select                   @18
-    send                    = "system32\\wsock32".send                     @19
-    sendto                  = fake_sendto                                  @20
-    setsockopt              = fake_setsockopt                              @21
-    shutdown                = "system32\\wsock32".shutdown                 @22
-    socket                  = fake_socket                                  @23
-    gethostbyaddr           = "system32\\wsock32".gethostbyaddr            @51
-    gethostbyname           = "system32\\wsock32".gethostbyname            @52
-    getprotobyname          = "system32\\wsock32".getprotobyname           @53
-    getprotobynumber        = "system32\\wsock32".getprotobynumber         @54
-    getservbyname           = "system32\\wsock32".getservbyname            @55
-    getservbyport           = "system32\\wsock32".getservbyport            @56
-    gethostname             = "system32\\wsock32".gethostname              @57
-    WSAAsyncSelect          = "system32\\wsock32".WSAAsyncSelect           @101
-    WSAAsyncGetHostByAddr   = "system32\\wsock32".WSAAsyncGetHostByAddr    @102
-    WSAAsyncGetHostByName   = "system32\\wsock32".WSAAsyncGetHostByName    @103
-    WSAAsyncGetProtoByNumber= "system32\\wsock32".WSAAsyncGetProtoByNumber @104
-    WSAAsyncGetProtoByName  = "system32\\wsock32".WSAAsyncGetProtoByName   @105
-    WSAAsyncGetServByPort   = "system32\\wsock32".WSAAsyncGetServByPort    @106
-    WSAAsyncGetServByName   = "system32\\wsock32".WSAAsyncGetServByName    @107
-    WSACancelAsyncRequest   = "system32\\wsock32".WSACancelAsyncRequest    @108
-    WSASetBlockingHook      = "system32\\wsock32".WSASetBlockingHook       @109
-    WSAUnhookBlockingHook   = "system32\\wsock32".WSAUnhookBlockingHook    @110
-    WSAGetLastError         = "system32\\wsock32".WSAGetLastError          @111
-    WSASetLastError         = "system32\\wsock32".WSASetLastError          @112
-    WSACancelBlockingCall   = "system32\\wsock32".WSACancelBlockingCall    @113
-    WSAIsBlocking           = "system32\\wsock32".WSAIsBlocking            @114
-    WSAStartup              = "system32\\wsock32".WSAStartup               @115
-    WSACleanup              = "system32\\wsock32".WSACleanup               @116
-    __WSAFDIsSet            = "system32\\wsock32".__WSAFDIsSet             @151
-    WEP                     = "system32\\wsock32".WEP                      @500
-    EnumProtocolsA          = "system32\\wsock32".EnumProtocolsA           @1111
-    EnumProtocolsW          = "system32\\wsock32".EnumProtocolsW           @1112
+    accept                  = ws2_32.accept                   @1
+    bind                    = fake_bind                       @2
+    closesocket             = fake_closesocket                @3
+    connect                 = ws2_32.connect                  @4
+    getpeername             = ws2_32.getpeername              @5
+    getsockname             = fake_getsockname                @6
+    getsockopt              = fake_getsockopt                 @7
+    htonl                   = ws2_32.htonl                    @8
+    htons                   = ws2_32.htons                    @9
+    inet_addr               = ws2_32.inet_addr                @10
+    inet_ntoa               = ws2_32.inet_ntoa                @11
+    ioctlsocket             = ws2_32.ioctlsocket              @12
+    listen                  = ws2_32.listen                   @13
+    ntohl                   = ws2_32.ntohl                    @14
+    ntohs                   = ws2_32.ntohs                    @15
+    recv                    = ws2_32.recv                     @16
+    recvfrom                = fake_recvfrom                   @17
+    select                  = ws2_32.select                   @18
+    send                    = ws2_32.send                     @19
+    sendto                  = fake_sendto                     @20
+    setsockopt              = fake_setsockopt                 @21
+    shutdown                = ws2_32.shutdown                 @22
+    socket                  = fake_socket                     @23
+    gethostbyaddr           = ws2_32.gethostbyaddr            @51
+    gethostbyname           = ws2_32.gethostbyname            @52
+    getprotobyname          = ws2_32.getprotobyname           @53
+    getprotobynumber        = ws2_32.getprotobynumber         @54
+    getservbyname           = ws2_32.getservbyname            @55
+    getservbyport           = ws2_32.getservbyport            @56
+    gethostname             = ws2_32.gethostname              @57
+    WSAAsyncSelect          = ws2_32.WSAAsyncSelect           @101
+    WSAAsyncGetHostByAddr   = ws2_32.WSAAsyncGetHostByAddr    @102
+    WSAAsyncGetHostByName   = ws2_32.WSAAsyncGetHostByName    @103
+    WSAAsyncGetProtoByNumber= ws2_32.WSAAsyncGetProtoByNumber @104
+    WSAAsyncGetProtoByName  = ws2_32.WSAAsyncGetProtoByName   @105
+    WSAAsyncGetServByPort   = ws2_32.WSAAsyncGetServByPort    @106
+    WSAAsyncGetServByName   = ws2_32.WSAAsyncGetServByName    @107
+    WSACancelAsyncRequest   = ws2_32.WSACancelAsyncRequest    @108
+    WSASetBlockingHook      = ws2_32.WSASetBlockingHook       @109
+    WSAUnhookBlockingHook   = ws2_32.WSAUnhookBlockingHook    @110
+    WSAGetLastError         = ws2_32.WSAGetLastError          @111
+    WSASetLastError         = ws2_32.WSASetLastError          @112
+    WSACancelBlockingCall   = ws2_32.WSACancelBlockingCall    @113
+    WSAIsBlocking           = ws2_32.WSAIsBlocking            @114
+    WSAStartup              = ws2_32.WSAStartup               @115
+    WSACleanup              = ws2_32.WSACleanup               @116
+    __WSAFDIsSet            = ws2_32.__WSAFDIsSet             @151
+    WEP                     = ws2_32.WEP                      @500
+    EnumProtocolsA          = mswsock.EnumProtocolsA          @1111
+    EnumProtocolsW          = mswsock.EnumProtocolsW          @1112
 
-    _IPX_Initialise                                                        @9001
-    _IPX_Open_Socket95                                                     @9002
-    _IPX_Get_Outstanding_Buffer95                                          @9003
-    _IPX_Broadcast_Packet95                                                @9004
-    _IPX_Send_Packet95                                                     @9005
-    _IPX_Get_Connection_Number95                                           @9006
-    _IPX_Start_Listening95                                                 @9007
-    _IPX_Get_Local_Target95                                                @9008
-    _IPX_Close_Socket95                                                    @9009
-    _IPX_Shut_Down95                                                       @9010
+    _IPX_Initialise                                           @9001
+    _IPX_Open_Socket95                                        @9002
+    _IPX_Get_Outstanding_Buffer95                             @9003
+    _IPX_Broadcast_Packet95                                   @9004
+    _IPX_Send_Packet95                                        @9005
+    _IPX_Get_Connection_Number95                              @9006
+    _IPX_Start_Listening95                                    @9007
+    _IPX_Get_Local_Target95                                   @9008
+    _IPX_Close_Socket95                                       @9009
+    _IPX_Shut_Down95                                          @9010
